@@ -844,6 +844,239 @@ class SimplifiedDatabaseBenchmark:
         plt.savefig(f"{viz_dir}/query_time_distribution.png", dpi=300)
         plt.close()
     
+    def _visualize_insert_performance(self, df, viz_dir):
+        """Generate visualizations for insert performance."""
+        # 1.1 Individual insert performance
+        plt.figure(figsize=(12, 8))
+        
+        # Aggregate data by database and data size
+        single_inserts = df[df['operation'] == 'insert_single']
+        grouped = single_inserts.groupby(['database', 'data_size'])['ops_per_second'].agg(['mean', 'std']).reset_index()
+        
+        # Create a chart for each database
+        for db_name in grouped['database'].unique():
+            db_data = grouped[grouped['database'] == db_name]
+            line, = plt.plot(db_data['data_size'], db_data['mean'], marker='o', linewidth=2, label=db_name)
+            plt.fill_between(
+                db_data['data_size'],
+                db_data['mean'] - db_data['std'],
+                db_data['mean'] + db_data['std'],
+                alpha=0.2
+            )
+            
+            # Annotate maximum point
+            if len(db_data) > 0:
+                max_val_idx = db_data['mean'].values.argmax()  # Indice local
+                if max_val_idx < len(db_data):
+                    max_val = db_data.iloc[max_val_idx]['mean']
+                    max_x = db_data.iloc[max_val_idx]['data_size']
+                    plt.annotate(f"{db_name} max: {max_val:.0f} ops/s",
+                            xy=(max_x, max_val),
+                            xytext=(0, 10),  # vertical offset
+                            textcoords='offset points',
+                            ha='center',
+                            va='bottom',
+                            bbox=dict(boxstyle='round,pad=0.3', fc='yellow', alpha=0.5),
+                            color=line.get_color())
+        
+        # Add reference line for acceptable throughput
+        target_throughput = 3000  # Target operations per second
+        plt.axhline(y=target_throughput, color='g', linestyle='--', alpha=0.7)
+        
+        if len(db_data) > 0:
+            plt.text(max(db_data['data_size'])*0.5, target_throughput*1.05, 
+                    'Target Throughput (3000 ops/s)', ha='center', va='bottom',
+                    bbox=dict(boxstyle='round,pad=0.3', fc='white', alpha=0.8))
+        
+        plt.title('Individual Insert Performance', fontsize=16)
+        plt.xlabel('Number of Events', fontsize=14)
+        plt.ylabel('Operations per Second', fontsize=14)
+        plt.legend(fontsize=12)
+        plt.grid(True, alpha=0.3)
+        plt.tight_layout()
+        plt.savefig(f"{viz_dir}/insert_single_performance.png", dpi=300)
+        plt.close()
+        
+        # 1.2 Batch insert performance
+        plt.figure(figsize=(12, 8))
+        
+        batch_inserts = df[df['operation'] == 'insert_batch']
+        grouped = batch_inserts.groupby(['database', 'batch_size'])['ops_per_second'].agg(['mean', 'std']).reset_index()
+        
+        for db_name in grouped['database'].unique():
+            db_data = grouped[grouped['database'] == db_name]
+            line, = plt.plot(db_data['batch_size'], db_data['mean'], marker='s', linewidth=2, label=db_name)
+            plt.fill_between(
+                db_data['batch_size'],
+                db_data['mean'] - db_data['std'],
+                db_data['mean'] + db_data['std'],
+                alpha=0.2
+            )
+            
+            # Annotate maximum point
+            if len(db_data) > 0:
+                max_val_idx = db_data['mean'].values.argmax()  # Indice local
+                if max_val_idx < len(db_data):
+                    max_val = db_data.iloc[max_val_idx]['mean']
+                    max_x = db_data.iloc[max_val_idx]['batch_size']
+                    plt.annotate(f"{db_name} max: {max_val:.0f} ops/s",
+                            xy=(max_x, max_val),
+                            xytext=(0, 10),  # vertical offset
+                            textcoords='offset points',
+                            ha='center',
+                            va='bottom',
+                            bbox=dict(boxstyle='round,pad=0.3', fc='yellow', alpha=0.5),
+                            color=line.get_color())
+        
+        plt.title('Batch Insert Performance', fontsize=16)
+        plt.xlabel('Batch Size', fontsize=14)
+        plt.ylabel('Operations per Second', fontsize=14)
+        plt.legend(fontsize=12)
+        plt.grid(True, alpha=0.3)
+        plt.tight_layout()
+        plt.savefig(f"{viz_dir}/insert_batch_performance.png", dpi=300)
+        plt.close()
+        
+        # 1.3 Batch performance gain
+        plt.figure(figsize=(14, 10))
+        
+        # For each database, compare batch efficiency vs individual inserts
+        for db_name in df['database'].unique():
+            db_single = df[(df['database'] == db_name) & (df['operation'] == 'insert_single')]
+            db_batch = df[(df['database'] == db_name) & (df['operation'] == 'insert_batch')]
+            
+            # Calculate average performance gain for each batch size
+            performance_gains = []
+            batch_sizes = []
+            
+            for batch_size in sorted(db_batch['batch_size'].unique()):
+                # Find the individual insert equivalent
+                single_equiv = db_single[db_single['data_size'] == batch_size]
+                batch_equiv = db_batch[db_batch['batch_size'] == batch_size]
+                
+                if not single_equiv.empty and not batch_equiv.empty:
+                    single_ops = single_equiv['ops_per_second'].mean()
+                    batch_ops = batch_equiv['ops_per_second'].mean()
+                    
+                    # Calculate the ratio (how many times faster)
+                    gain = batch_ops / single_ops if single_ops > 0 else 0
+                    performance_gains.append(gain)
+                    batch_sizes.append(batch_size)
+            
+            if performance_gains:  # Only plot if we have data
+                line, = plt.plot(batch_sizes, performance_gains, marker='D', linewidth=2, label=db_name)
+                
+                # Annotate maximum gain
+                if performance_gains:
+                    max_idx = np.argmax(performance_gains)
+                    if max_idx < len(performance_gains):
+                        max_gain = performance_gains[max_idx]
+                        max_batch = batch_sizes[max_idx]
+                        plt.annotate(f"{db_name} max gain: {max_gain:.1f}x",
+                                xy=(max_batch, max_gain),
+                                xytext=(0, 10),
+                                textcoords='offset points',
+                                ha='center',
+                                va='bottom',
+                                bbox=dict(boxstyle='round,pad=0.3', fc='yellow', alpha=0.5),
+                                color=line.get_color())
+        
+        plt.axhline(y=1, color='r', linestyle='--', alpha=0.5, label='Equivalence (no gain)')
+        plt.title('Performance Gain of Batch Inserts vs. Individual Inserts', fontsize=16)
+        plt.xlabel('Batch Size', fontsize=14)
+        plt.ylabel('Speedup Factor', fontsize=14)
+        plt.legend(fontsize=12)
+        plt.grid(True)
+        plt.tight_layout()
+        plt.savefig(f"{viz_dir}/insert_batch_efficiency.png", dpi=300)
+        plt.close()
+
+    def _visualize_query_performance(self, df, viz_dir):
+        """Generate visualizations for query performance."""
+        # 2.1 Average execution time by query type
+        plt.figure(figsize=(14, 10))
+        
+        # Aggregate data by database and operation type
+        grouped = df.groupby(['database', 'operation'])['time'].agg(['mean', 'std']).reset_index()
+        
+        # Create grouped bar chart
+        operations = sorted(grouped['operation'].unique())
+        num_operations = len(operations)
+        bar_width = 0.8 / len(grouped['database'].unique())
+        index = np.arange(num_operations)
+        
+        for i, db_name in enumerate(sorted(grouped['database'].unique())):
+            db_data = grouped[grouped['database'] == db_name]
+            means = []
+            stds = []
+            
+            for op in operations:
+                op_data = db_data[db_data['operation'] == op]
+                if not op_data.empty:
+                    means.append(op_data['mean'].values[0])
+                    stds.append(op_data['std'].values[0])
+                else:
+                    means.append(0)
+                    stds.append(0)
+            
+            position = index + i * bar_width
+            plt.bar(position, means, bar_width, yerr=stds, capsize=5, label=db_name)
+            
+            # Annotate bars with values
+            for j, v in enumerate(means):
+                if v > 0:
+                    plt.text(position[j], v + stds[j] + 0.001, 
+                            f"{v:.4f}s", 
+                            ha='center', va='bottom', 
+                            fontsize=8, rotation=45)
+        
+        # Apply hatches to bars
+        apply_hatches_to_bars(plt.gca())
+        
+        # Add reference line for acceptable query time
+        acceptable_query_time = 0.01  # 10ms
+        plt.axhline(y=acceptable_query_time, color='r', linestyle='--', alpha=0.7)
+        
+        if len(index) > 0:
+            plt.text(index[-1], acceptable_query_time*1.1, 
+                    'Acceptable Query Time (10ms)', ha='right', va='bottom',
+                    bbox=dict(boxstyle='round,pad=0.3', fc='white', alpha=0.8))
+        
+        plt.xticks(index + bar_width * (len(grouped['database'].unique()) - 1) / 2, 
+                [op.replace('_', ' ').title() for op in operations], 
+                rotation=45, ha='right')
+        plt.title('Average Execution Time by Query Type', fontsize=16)
+        plt.xlabel('Query Type', fontsize=14)
+        plt.ylabel('Time (seconds)', fontsize=14)
+        plt.legend(title='Database', fontsize=12)
+        plt.grid(True, axis='y', alpha=0.3)
+        plt.tight_layout()
+        plt.savefig(f"{viz_dir}/query_performance_by_type.png", dpi=300)
+        plt.close()
+        
+        # 2.2 Boxplot of query times
+        plt.figure(figsize=(14, 10))
+        
+        # Create a boxplot for each query type
+        sns.boxplot(x='operation', y='time', hue='database', data=df)
+        
+        # Add reference line for acceptable query time
+        plt.axhline(y=acceptable_query_time, color='r', linestyle='--', alpha=0.7)
+        
+        if len(operations) > 0:
+            plt.text(len(operations)-1, acceptable_query_time*1.1, 
+                    'Acceptable Query Time (10ms)', ha='right', va='bottom',
+                    bbox=dict(boxstyle='round,pad=0.3', fc='white', alpha=0.8))
+        
+        plt.title('Distribution of Execution Times by Query Type', fontsize=16)
+        plt.xlabel('Query Type', fontsize=14)
+        plt.ylabel('Time (seconds)', fontsize=14)
+        plt.xticks(rotation=45)
+        plt.legend(title='Database', fontsize=12)
+        plt.tight_layout()
+        plt.savefig(f"{viz_dir}/query_time_distribution.png", dpi=300)
+        plt.close()
+
     def _create_latency_throughput_graph(self, insert_df, query_df, viz_dir):
         """Create a combined graph showing the inverse relationship between latency and throughput."""
         plt.figure(figsize=(14, 10))
@@ -857,26 +1090,30 @@ class SimplifiedDatabaseBenchmark:
             # Get throughput data
             throughput_data = insert_df[(insert_df['database'] == db_name) & 
                                     (insert_df['operation'] == 'insert_batch')]
-            throughput_grouped = throughput_data.groupby('data_size')['ops_per_second'].mean().reset_index()
             
-            # Get latency data 
-            latency_data = query_df[query_df['database'] == db_name]
-            latency_grouped = latency_data.groupby('operation')['time'].mean().reset_index()
-            
-            # Plot throughput on primary axis
-            line1, = ax1.plot(throughput_grouped['data_size'], throughput_grouped['ops_per_second'], 
-                     marker='o', linestyle='-', linewidth=2, 
-                     label=f"{db_name} (Throughput)")
-            
-            # Plot latency on secondary axis if available
-            if not latency_grouped.empty:
-                avg_latency = latency_grouped['time'].mean()
-                latency_values = [avg_latency] * len(throughput_grouped)
-                line2, = ax2.plot(throughput_grouped['data_size'], 
-                         latency_values, 
-                         marker='s', linestyle='--', linewidth=2,
-                         color=line1.get_color(), alpha=0.5,
-                         label=f"{db_name} (Latency)")
+            if not throughput_data.empty:
+                throughput_grouped = throughput_data.groupby('data_size')['ops_per_second'].mean().reset_index()
+                
+                # Get latency data 
+                latency_data = query_df[query_df['database'] == db_name]
+                
+                # Plot throughput on primary axis
+                line1, = ax1.plot(throughput_grouped['data_size'], throughput_grouped['ops_per_second'], 
+                        marker='o', linestyle='-', linewidth=2, 
+                        label=f"{db_name} (Throughput)")
+                
+                # Plot latency on secondary axis if available
+                if not latency_data.empty:
+                    latency_grouped = latency_data.groupby('operation')['time'].mean().reset_index()
+                    
+                    if not latency_grouped.empty:
+                        avg_latency = latency_grouped['time'].mean()
+                        latency_values = [avg_latency] * len(throughput_grouped)
+                        line2, = ax2.plot(throughput_grouped['data_size'], 
+                                latency_values, 
+                                marker='s', linestyle='--', linewidth=2,
+                                color=line1.get_color(), alpha=0.5,
+                                label=f"{db_name} (Latency)")
         
         # Set labels and title
         ax1.set_xlabel('Batch Size / Number of Events', fontsize=14)
@@ -892,26 +1129,26 @@ class SimplifiedDatabaseBenchmark:
         lines1, labels1 = ax1.get_legend_handles_labels()
         lines2, labels2 = ax2.get_legend_handles_labels()
         ax1.legend(lines1 + lines2, labels1 + labels2, loc='upper center', bbox_to_anchor=(0.5, -0.1),
-                   ncol=3, fontsize=12)
+                ncol=3, fontsize=12)
         
         # Add an annotation explaining the relationship
         plt.figtext(0.5, 0.01, 
-                   "Inverse relationship: As throughput increases, systems typically experience higher latency.",
-                   ha="center", fontsize=10, 
-                   bbox={"facecolor":"orange", "alpha":0.1, "pad":5})
+                "Inverse relationship: As throughput increases, systems typically experience higher latency.",
+                ha="center", fontsize=10, 
+                bbox={"facecolor":"orange", "alpha":0.1, "pad":5})
         
         plt.title('Relationship Between Throughput and Latency', fontsize=16)
         plt.tight_layout()
         plt.savefig(f"{viz_dir}/latency_throughput_relationship.png", dpi=300)
         plt.close()
-    
+
     def _create_radar_chart(self, insert_df, query_df, advanced_query_df, viz_dir):
         """Create a radar chart comparing overall performance across all dimensions."""
         plt.figure(figsize=(12, 12))
         
         # Prepare data for radar chart
         categories = ['Individual Insert', 'Batch Insert', 'User Query', 
-                      'Page Query', 'Advanced Queries', 'Concurrency Scalability']
+                    'Page Query', 'Advanced Queries', 'Concurrency Scalability']
         
         # Calculate normalized scores (higher is better)
         scores = {}
@@ -921,7 +1158,7 @@ class SimplifiedDatabaseBenchmark:
             
             # Single insert performance
             single_inserts = insert_df[(insert_df['database'] == db_name) & 
-                                  (insert_df['operation'] == 'insert_single')]
+                                (insert_df['operation'] == 'insert_single')]
             if not single_inserts.empty:
                 avg_ops = single_inserts['ops_per_second'].mean()
                 db_scores.append(avg_ops)
@@ -930,7 +1167,7 @@ class SimplifiedDatabaseBenchmark:
                 
             # Batch insert performance
             batch_inserts = insert_df[(insert_df['database'] == db_name) & 
-                                 (insert_df['operation'] == 'insert_batch')]
+                                (insert_df['operation'] == 'insert_batch')]
             if not batch_inserts.empty:
                 avg_ops = batch_inserts['ops_per_second'].mean()
                 db_scores.append(avg_ops)
@@ -939,7 +1176,7 @@ class SimplifiedDatabaseBenchmark:
                 
             # Query by user performance (lower time is better, so invert)
             user_queries = query_df[(query_df['database'] == db_name) & 
-                              (query_df['operation'] == 'query_by_user')]
+                            (query_df['operation'] == 'query_by_user')]
             if not user_queries.empty:
                 avg_time = user_queries['time'].mean()
                 # Invert so higher is better
@@ -949,7 +1186,7 @@ class SimplifiedDatabaseBenchmark:
                 
             # Query by page performance (lower time is better, so invert)
             page_queries = query_df[(query_df['database'] == db_name) & 
-                              (query_df['operation'] == 'query_by_page')]
+                            (query_df['operation'] == 'query_by_page')]
             if not page_queries.empty:
                 avg_time = page_queries['time'].mean()
                 # Invert so higher is better
@@ -973,8 +1210,10 @@ class SimplifiedDatabaseBenchmark:
             if not batch_inserts.empty:
                 batch_sizes = batch_inserts['batch_size'].unique()
                 if len(batch_sizes) >= 2:
-                    small_batch = batch_inserts[batch_inserts['batch_size'] == min(batch_sizes)]['ops_per_second'].mean()
-                    large_batch = batch_inserts[batch_inserts['batch_size'] == max(batch_sizes)]['ops_per_second'].mean()
+                    min_batch_size = min(batch_sizes)
+                    max_batch_size = max(batch_sizes)
+                    small_batch = batch_inserts[batch_inserts['batch_size'] == min_batch_size]['ops_per_second'].mean()
+                    large_batch = batch_inserts[batch_inserts['batch_size'] == max_batch_size]['ops_per_second'].mean()
                     # If scales well, large_batch should be higher than small_batch
                     scalability = large_batch / (small_batch + 0.0001)
                     db_scores.append(scalability)
@@ -991,7 +1230,7 @@ class SimplifiedDatabaseBenchmark:
         
         for db_name, db_scores in scores.items():
             normalized_scores[db_name] = [db_scores[i] / max_scores[i] if max_scores[i] > 0 else 0 
-                                         for i in range(len(categories))]
+                                        for i in range(len(categories))]
         
         # Create radar chart
         angles = np.linspace(0, 2*np.pi, len(categories), endpoint=False).tolist()
@@ -1018,9 +1257,9 @@ class SimplifiedDatabaseBenchmark:
         
         # Add annotations explaining the chart
         plt.figtext(0.5, 0.01, 
-                   "Radar chart shows relative performance across dimensions (higher is better).\nValues are normalized with the best performer in each category set to 1.0.",
-                   ha="center", fontsize=10, 
-                   bbox={"facecolor":"lightblue", "alpha":0.2, "pad":5})
+                "Radar chart shows relative performance across dimensions (higher is better).\nValues are normalized with the best performer in each category set to 1.0.",
+                ha="center", fontsize=10, 
+                bbox={"facecolor":"lightblue", "alpha":0.2, "pad":5})
         
         plt.tight_layout()
         plt.savefig(f"{viz_dir}/performance_radar_chart.png", dpi=300)

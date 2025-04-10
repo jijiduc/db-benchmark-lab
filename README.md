@@ -112,7 +112,7 @@ python tests/run_benchmarks.py --tests insert query --data-sizes 5000 10000 --mo
 python tests/run_benchmarks.py --tests advanced_query --setup-data-size 5000 --iterations 3
 
 # Full comprehensive benchmark with all features
-python tests/run_benchmarks.py --tests insert query advanced_query update delete concurrent --monitor --iterations 5
+python tests/run_benchmarks.py --tests insert query advanced_query update delete concurrent --data-sizes 100 1000 5000 10000 --batch-sizes 1 10 50 100 500 1000 --monitor --concurrency-levels 1 5 10 20 --iterations 5
 ```
 ## Analyzing Results
 ```bash

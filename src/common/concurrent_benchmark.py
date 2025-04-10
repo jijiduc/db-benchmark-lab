@@ -366,34 +366,37 @@ class ConcurrentBenchmark:
                 )
                 
                 # Annotate maximum point
-                max_idx = db_data[mean_col].idxmax()
-                if not pd.isna(max_idx):
-                    max_val = db_data.iloc[max_idx][mean_col]
-                    max_conc = db_data.iloc[max_idx]['concurrency']
-                    plt.annotate(f"Max: {max_val:.0f} evt/s",
-                             xy=(max_conc, max_val),
-                             xytext=(0, 10),
-                             textcoords='offset points',
-                             ha='center',
-                             va='bottom',
-                             bbox=dict(boxstyle='round,pad=0.3', fc='yellow', alpha=0.5),
-                             color=line.get_color())
+                if len(db_data) > 0:
+                    max_val_idx = db_data[mean_col].values.argmax()  # Indice local
+                    if max_val_idx < len(db_data):
+                        max_val = db_data.iloc[max_val_idx][mean_col]
+                        max_conc = db_data.iloc[max_val_idx]['concurrency']
+                        plt.annotate(f"Max: {max_val:.0f} evt/s",
+                                 xy=(max_conc, max_val),
+                                 xytext=(0, 10),
+                                 textcoords='offset points',
+                                 ha='center',
+                                 va='bottom',
+                                 bbox=dict(boxstyle='round,pad=0.3', fc='yellow', alpha=0.5),
+                                 color=line.get_color())
                 
                 # Find crossover points with other databases
                 for other_db in grouped['database'].unique():
                     if other_db != db_name:
                         other_data = grouped[grouped['database'] == other_db]
                         for i in range(len(db_data) - 1):
-                            db_x1 = db_data.iloc[i]['concurrency']
-                            db_y1 = db_data.iloc[i][mean_col]
-                            db_x2 = db_data.iloc[i+1]['concurrency']
-                            db_y2 = db_data.iloc[i+1][mean_col]
+                            # Extraire des valeurs scalaires (correction des FutureWarnings)
+                            db_x1 = float(db_data.iloc[i, db_data.columns.get_loc('concurrency')])
+                            db_y1 = float(db_data.iloc[i][mean_col])
+                            db_x2 = float(db_data.iloc[i+1, db_data.columns.get_loc('concurrency')])
+                            db_y2 = float(db_data.iloc[i+1][mean_col])
                             
                             for j in range(len(other_data) - 1):
-                                other_x1 = other_data.iloc[j]['concurrency']
-                                other_y1 = other_data.iloc[j][mean_col]
-                                other_x2 = other_data.iloc[j+1]['concurrency']
-                                other_y2 = other_data.iloc[j+1][mean_col]
+                                # Extraire des valeurs scalaires (correction des FutureWarnings)
+                                other_x1 = float(other_data.iloc[j, other_data.columns.get_loc('concurrency')])
+                                other_y1 = float(other_data.iloc[j][mean_col])
+                                other_x2 = float(other_data.iloc[j+1, other_data.columns.get_loc('concurrency')])
+                                other_y2 = float(other_data.iloc[j+1][mean_col])
                                 
                                 # Check if segments intersect
                                 if (db_x1 <= other_x2 and db_x2 >= other_x1) and \
@@ -417,11 +420,12 @@ class ConcurrentBenchmark:
                                                  color='red')
             
             # Add performance threshold reference
-            acceptable_throughput = 2000  # Example threshold
-            plt.axhline(y=acceptable_throughput, color='r', linestyle='--', alpha=0.7)
-            plt.text(max(db_data['concurrency'])*0.5, acceptable_throughput*1.05, 
-                     'Acceptable Throughput Threshold', ha='center', va='bottom',
-                     bbox=dict(boxstyle='round,pad=0.3', fc='white', alpha=0.8))
+            if len(db_data) > 0:  # Vérifier que db_data n'est pas vide
+                acceptable_throughput = 2000  # Example threshold
+                plt.axhline(y=acceptable_throughput, color='r', linestyle='--', alpha=0.7)
+                plt.text(max(db_data['concurrency'])*0.5, acceptable_throughput*1.05, 
+                         'Acceptable Throughput Threshold', ha='center', va='bottom',
+                         bbox=dict(boxstyle='round,pad=0.3', fc='white', alpha=0.8))
             
             plt.title('Throughput vs Concurrency Level - Insert Operations', fontsize=16)
             plt.xlabel('Concurrency Level (Number of Threads)', fontsize=14)
@@ -453,25 +457,27 @@ class ConcurrentBenchmark:
                 )
                 
                 # Annotate maximum latency
-                max_idx = db_data[mean_col].idxmax()
-                if not pd.isna(max_idx):
-                    max_val = db_data.iloc[max_idx][mean_col]
-                    max_conc = db_data.iloc[max_idx]['concurrency']
-                    if max_val > 5:  # Only annotate if latency is significant
-                        axs[0].annotate(f"{max_val:.1f} ms",
-                                     xy=(max_conc, max_val),
-                                     xytext=(0, 10),
-                                     textcoords='offset points',
-                                     ha='center',
-                                     va='bottom',
-                                     bbox=dict(boxstyle='round,pad=0.3', fc='yellow', alpha=0.5))
+                if len(db_data) > 0:
+                    max_val_idx = db_data[mean_col].values.argmax()  # Indice local
+                    if max_val_idx < len(db_data):
+                        max_val = db_data.iloc[max_val_idx][mean_col]
+                        max_conc = db_data.iloc[max_val_idx]['concurrency']
+                        if max_val > 5:  # Only annotate if latency is significant
+                            axs[0].annotate(f"{max_val:.1f} ms",
+                                         xy=(max_conc, max_val),
+                                         xytext=(0, 10),
+                                         textcoords='offset points',
+                                         ha='center',
+                                         va='bottom',
+                                         bbox=dict(boxstyle='round,pad=0.3', fc='yellow', alpha=0.5))
             
             # Add latency threshold
-            acceptable_latency = 10  # 10ms threshold
-            axs[0].axhline(y=acceptable_latency, color='r', linestyle='--', alpha=0.7)
-            axs[0].text(max(db_data['concurrency'])*0.5, acceptable_latency*1.1, 
-                     'Acceptable', ha='center', va='bottom',
-                     bbox=dict(boxstyle='round,pad=0.3', fc='white', alpha=0.8))
+            if len(db_data) > 0:  # Vérifier que db_data n'est pas vide
+                acceptable_latency = 10  # 10ms threshold
+                axs[0].axhline(y=acceptable_latency, color='r', linestyle='--', alpha=0.7)
+                axs[0].text(max(db_data['concurrency'])*0.5, acceptable_latency*1.1, 
+                         'Acceptable', ha='center', va='bottom',
+                         bbox=dict(boxstyle='round,pad=0.3', fc='white', alpha=0.8))
             
             axs[0].set_title('Average Latency', fontsize=14)
             axs[0].set_xlabel('Concurrency Level', fontsize=12)
@@ -494,25 +500,27 @@ class ConcurrentBenchmark:
                 )
                 
                 # Annotate maximum latency
-                max_idx = db_data[mean_col].idxmax()
-                if not pd.isna(max_idx):
-                    max_val = db_data.iloc[max_idx][mean_col]
-                    max_conc = db_data.iloc[max_idx]['concurrency']
-                    if max_val > 5:  # Only annotate if latency is significant
-                        axs[1].annotate(f"{max_val:.1f} ms",
-                                     xy=(max_conc, max_val),
-                                     xytext=(0, 10),
-                                     textcoords='offset points',
-                                     ha='center',
-                                     va='bottom',
-                                     bbox=dict(boxstyle='round,pad=0.3', fc='yellow', alpha=0.5))
+                if len(db_data) > 0:
+                    max_val_idx = db_data[mean_col].values.argmax()  # Indice local
+                    if max_val_idx < len(db_data):
+                        max_val = db_data.iloc[max_val_idx][mean_col]
+                        max_conc = db_data.iloc[max_val_idx]['concurrency']
+                        if max_val > 5:  # Only annotate if latency is significant
+                            axs[1].annotate(f"{max_val:.1f} ms",
+                                         xy=(max_conc, max_val),
+                                         xytext=(0, 10),
+                                         textcoords='offset points',
+                                         ha='center',
+                                         va='bottom',
+                                         bbox=dict(boxstyle='round,pad=0.3', fc='yellow', alpha=0.5))
             
             # Add latency threshold
-            p95_threshold = 50  # 50ms threshold for P95
-            axs[1].axhline(y=p95_threshold, color='r', linestyle='--', alpha=0.7)
-            axs[1].text(max(db_data['concurrency'])*0.5, p95_threshold*1.1, 
-                     'P95 Threshold', ha='center', va='bottom',
-                     bbox=dict(boxstyle='round,pad=0.3', fc='white', alpha=0.8))
+            if len(db_data) > 0:  # Vérifier que db_data n'est pas vide
+                p95_threshold = 50  # 50ms threshold for P95
+                axs[1].axhline(y=p95_threshold, color='r', linestyle='--', alpha=0.7)
+                axs[1].text(max(db_data['concurrency'])*0.5, p95_threshold*1.1, 
+                         'P95 Threshold', ha='center', va='bottom',
+                         bbox=dict(boxstyle='round,pad=0.3', fc='white', alpha=0.8))
             
             axs[1].set_title('P95 Latency', fontsize=14)
             axs[1].set_xlabel('Concurrency Level', fontsize=12)
@@ -535,25 +543,27 @@ class ConcurrentBenchmark:
                 )
                 
                 # Annotate maximum latency
-                max_idx = db_data[mean_col].idxmax()
-                if not pd.isna(max_idx):
-                    max_val = db_data.iloc[max_idx][mean_col]
-                    max_conc = db_data.iloc[max_idx]['concurrency']
-                    if max_val > 5:  # Only annotate if latency is significant
-                        axs[2].annotate(f"{max_val:.1f} ms",
-                                     xy=(max_conc, max_val),
-                                     xytext=(0, 10),
-                                     textcoords='offset points',
-                                     ha='center',
-                                     va='bottom',
-                                     bbox=dict(boxstyle='round,pad=0.3', fc='yellow', alpha=0.5))
+                if len(db_data) > 0:
+                    max_val_idx = db_data[mean_col].values.argmax()  # Indice local
+                    if max_val_idx < len(db_data):
+                        max_val = db_data.iloc[max_val_idx][mean_col]
+                        max_conc = db_data.iloc[max_val_idx]['concurrency']
+                        if max_val > 5:  # Only annotate if latency is significant
+                            axs[2].annotate(f"{max_val:.1f} ms",
+                                         xy=(max_conc, max_val),
+                                         xytext=(0, 10),
+                                         textcoords='offset points',
+                                         ha='center',
+                                         va='bottom',
+                                         bbox=dict(boxstyle='round,pad=0.3', fc='yellow', alpha=0.5))
             
             # Add latency threshold
-            p99_threshold = 100  # 100ms threshold for P99
-            axs[2].axhline(y=p99_threshold, color='r', linestyle='--', alpha=0.7)
-            axs[2].text(max(db_data['concurrency'])*0.5, p99_threshold*1.1, 
-                     'P99 Threshold', ha='center', va='bottom',
-                     bbox=dict(boxstyle='round,pad=0.3', fc='white', alpha=0.8))
+            if len(db_data) > 0:  # Vérifier que db_data n'est pas vide
+                p99_threshold = 100  # 100ms threshold for P99
+                axs[2].axhline(y=p99_threshold, color='r', linestyle='--', alpha=0.7)
+                axs[2].text(max(db_data['concurrency'])*0.5, p99_threshold*1.1, 
+                         'P99 Threshold', ha='center', va='bottom',
+                         bbox=dict(boxstyle='round,pad=0.3', fc='white', alpha=0.8))
             
             axs[2].set_title('P99 Latency', fontsize=14)
             axs[2].set_xlabel('Concurrency Level', fontsize=12)
@@ -590,25 +600,27 @@ class ConcurrentBenchmark:
                 )
                 
                 # Annotate maximum point
-                max_idx = db_data[mean_col].idxmax()
-                if not pd.isna(max_idx):
-                    max_val = db_data.iloc[max_idx][mean_col]
-                    max_conc = db_data.iloc[max_idx]['concurrency']
-                    plt.annotate(f"Max: {max_val:.0f} q/s",
-                             xy=(max_conc, max_val),
-                             xytext=(0, 10),
-                             textcoords='offset points',
-                             ha='center',
-                             va='bottom',
-                             bbox=dict(boxstyle='round,pad=0.3', fc='yellow', alpha=0.5),
-                             color=line.get_color())
+                if len(db_data) > 0:
+                    max_val_idx = db_data[mean_col].values.argmax()  # Indice local
+                    if max_val_idx < len(db_data):
+                        max_val = db_data.iloc[max_val_idx][mean_col]
+                        max_conc = db_data.iloc[max_val_idx]['concurrency']
+                        plt.annotate(f"Max: {max_val:.0f} q/s",
+                                 xy=(max_conc, max_val),
+                                 xytext=(0, 10),
+                                 textcoords='offset points',
+                                 ha='center',
+                                 va='bottom',
+                                 bbox=dict(boxstyle='round,pad=0.3', fc='yellow', alpha=0.5),
+                                 color=line.get_color())
             
             # Add performance threshold reference
-            acceptable_throughput = 500  # Example threshold for queries
-            plt.axhline(y=acceptable_throughput, color='r', linestyle='--', alpha=0.7)
-            plt.text(max(db_data['concurrency'])*0.5, acceptable_throughput*1.05, 
-                     'Acceptable Query Throughput', ha='center', va='bottom',
-                     bbox=dict(boxstyle='round,pad=0.3', fc='white', alpha=0.8))
+            if len(db_data) > 0:  # Vérifier que db_data n'est pas vide
+                acceptable_throughput = 500  # Example threshold for queries
+                plt.axhline(y=acceptable_throughput, color='r', linestyle='--', alpha=0.7)
+                plt.text(max(db_data['concurrency'])*0.5, acceptable_throughput*1.05, 
+                         'Acceptable Query Throughput', ha='center', va='bottom',
+                         bbox=dict(boxstyle='round,pad=0.3', fc='white', alpha=0.8))
             
             plt.title('Throughput vs Concurrency Level - Query Operations', fontsize=16)
             plt.xlabel('Concurrency Level (Number of Threads)', fontsize=14)
@@ -638,25 +650,27 @@ class ConcurrentBenchmark:
                 )
                 
                 # Annotate maximum latency
-                max_idx = db_data[mean_col].idxmax()
-                if not pd.isna(max_idx):
-                    max_val = db_data.iloc[max_idx][mean_col]
-                    max_conc = db_data.iloc[max_idx]['concurrency']
-                    if max_val > 50:  # Only annotate if latency is significant
-                        axs[0].annotate(f"{max_val:.1f} ms",
-                                     xy=(max_conc, max_val),
-                                     xytext=(0, 10),
-                                     textcoords='offset points',
-                                     ha='center',
-                                     va='bottom',
-                                     bbox=dict(boxstyle='round,pad=0.3', fc='yellow', alpha=0.5))
+                if len(db_data) > 0:
+                    max_val_idx = db_data[mean_col].values.argmax()  # Indice local
+                    if max_val_idx < len(db_data):
+                        max_val = db_data.iloc[max_val_idx][mean_col]
+                        max_conc = db_data.iloc[max_val_idx]['concurrency']
+                        if max_val > 50:  # Only annotate if latency is significant
+                            axs[0].annotate(f"{max_val:.1f} ms",
+                                         xy=(max_conc, max_val),
+                                         xytext=(0, 10),
+                                         textcoords='offset points',
+                                         ha='center',
+                                         va='bottom',
+                                         bbox=dict(boxstyle='round,pad=0.3', fc='yellow', alpha=0.5))
             
             # Add latency threshold
-            acceptable_query_latency = 100  # 100ms threshold for queries
-            axs[0].axhline(y=acceptable_query_latency, color='r', linestyle='--', alpha=0.7)
-            axs[0].text(max(db_data['concurrency'])*0.5, acceptable_query_latency*1.1, 
-                     'Acceptable', ha='center', va='bottom',
-                     bbox=dict(boxstyle='round,pad=0.3', fc='white', alpha=0.8))
+            if len(db_data) > 0:  # Vérifier que db_data n'est pas vide
+                acceptable_query_latency = 100  # 100ms threshold for queries
+                axs[0].axhline(y=acceptable_query_latency, color='r', linestyle='--', alpha=0.7)
+                axs[0].text(max(db_data['concurrency'])*0.5, acceptable_query_latency*1.1, 
+                         'Acceptable', ha='center', va='bottom',
+                         bbox=dict(boxstyle='round,pad=0.3', fc='white', alpha=0.8))
             
             axs[0].set_title('Average Latency', fontsize=14)
             axs[0].set_xlabel('Concurrency Level', fontsize=12)
@@ -679,25 +693,27 @@ class ConcurrentBenchmark:
                 )
                 
                 # Annotate maximum latency
-                max_idx = db_data[mean_col].idxmax()
-                if not pd.isna(max_idx):
-                    max_val = db_data.iloc[max_idx][mean_col]
-                    max_conc = db_data.iloc[max_idx]['concurrency']
-                    if max_val > 100:  # Only annotate if latency is significant
-                        axs[1].annotate(f"{max_val:.1f} ms",
-                                     xy=(max_conc, max_val),
-                                     xytext=(0, 10),
-                                     textcoords='offset points',
-                                     ha='center',
-                                     va='bottom',
-                                     bbox=dict(boxstyle='round,pad=0.3', fc='yellow', alpha=0.5))
+                if len(db_data) > 0:
+                    max_val_idx = db_data[mean_col].values.argmax()  # Indice local
+                    if max_val_idx < len(db_data):
+                        max_val = db_data.iloc[max_val_idx][mean_col]
+                        max_conc = db_data.iloc[max_val_idx]['concurrency']
+                        if max_val > 100:  # Only annotate if latency is significant
+                            axs[1].annotate(f"{max_val:.1f} ms",
+                                         xy=(max_conc, max_val),
+                                         xytext=(0, 10),
+                                         textcoords='offset points',
+                                         ha='center',
+                                         va='bottom',
+                                         bbox=dict(boxstyle='round,pad=0.3', fc='yellow', alpha=0.5))
             
             # Add latency threshold
-            query_p95_threshold = 500  # 500ms threshold for P95 query latency
-            axs[1].axhline(y=query_p95_threshold, color='r', linestyle='--', alpha=0.7)
-            axs[1].text(max(db_data['concurrency'])*0.5, query_p95_threshold*1.1, 
-                     'P95 Threshold', ha='center', va='bottom',
-                     bbox=dict(boxstyle='round,pad=0.3', fc='white', alpha=0.8))
+            if len(db_data) > 0:  # Vérifier que db_data n'est pas vide
+                query_p95_threshold = 500  # 500ms threshold for P95 query latency
+                axs[1].axhline(y=query_p95_threshold, color='r', linestyle='--', alpha=0.7)
+                axs[1].text(max(db_data['concurrency'])*0.5, query_p95_threshold*1.1, 
+                         'P95 Threshold', ha='center', va='bottom',
+                         bbox=dict(boxstyle='round,pad=0.3', fc='white', alpha=0.8))
             
             axs[1].set_title('P95 Latency', fontsize=14)
             axs[1].set_xlabel('Concurrency Level', fontsize=12)
@@ -720,25 +736,27 @@ class ConcurrentBenchmark:
                 )
                 
                 # Annotate maximum latency
-                max_idx = db_data[mean_col].idxmax()
-                if not pd.isna(max_idx):
-                    max_val = db_data.iloc[max_idx][mean_col]
-                    max_conc = db_data.iloc[max_idx]['concurrency']
-                    if max_val > 100:  # Only annotate if latency is significant
-                        axs[2].annotate(f"{max_val:.1f} ms",
-                                     xy=(max_conc, max_val),
-                                     xytext=(0, 10),
-                                     textcoords='offset points',
-                                     ha='center',
-                                     va='bottom',
-                                     bbox=dict(boxstyle='round,pad=0.3', fc='yellow', alpha=0.5))
+                if len(db_data) > 0:
+                    max_val_idx = db_data[mean_col].values.argmax()  # Indice local
+                    if max_val_idx < len(db_data):
+                        max_val = db_data.iloc[max_val_idx][mean_col]
+                        max_conc = db_data.iloc[max_val_idx]['concurrency']
+                        if max_val > 100:  # Only annotate if latency is significant
+                            axs[2].annotate(f"{max_val:.1f} ms",
+                                         xy=(max_conc, max_val),
+                                         xytext=(0, 10),
+                                         textcoords='offset points',
+                                         ha='center',
+                                         va='bottom',
+                                         bbox=dict(boxstyle='round,pad=0.3', fc='yellow', alpha=0.5))
             
             # Add latency threshold
-            query_p99_threshold = 1000  # 1000ms threshold for P99 query latency
-            axs[2].axhline(y=query_p99_threshold, color='r', linestyle='--', alpha=0.7)
-            axs[2].text(max(db_data['concurrency'])*0.5, query_p99_threshold*1.1, 
-                     'P99 Threshold', ha='center', va='bottom',
-                     bbox=dict(boxstyle='round,pad=0.3', fc='white', alpha=0.8))
+            if len(db_data) > 0:  # Vérifier que db_data n'est pas vide
+                query_p99_threshold = 1000  # 1000ms threshold for P99 query latency
+                axs[2].axhline(y=query_p99_threshold, color='r', linestyle='--', alpha=0.7)
+                axs[2].text(max(db_data['concurrency'])*0.5, query_p99_threshold*1.1, 
+                         'P99 Threshold', ha='center', va='bottom',
+                         bbox=dict(boxstyle='round,pad=0.3', fc='white', alpha=0.8))
             
             axs[2].set_title('P99 Latency', fontsize=14)
             axs[2].set_xlabel('Concurrency Level', fontsize=12)
