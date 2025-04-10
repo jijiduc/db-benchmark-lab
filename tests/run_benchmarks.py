@@ -10,6 +10,12 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
+import matplotlib.cm as cm
+from matplotlib.path import Path
+from matplotlib.spines import Spine
+from matplotlib.transforms import Affine2D
+from matplotlib.projections.polar import PolarAxes
+from matplotlib.projections import register_projection
 from datetime import datetime, timedelta
 import argparse
 import sys
@@ -22,6 +28,73 @@ from src.mongodb.client import MongoDBClient
 from src.postgresql.client import PostgreSQLClient
 from src.redis.client import RedisClient
 from src.common.generate_data import generate_dataset, generate_advanced_dataset
+
+def set_uniform_y_limits(axes_list, padding=0.1):
+    """
+    Set uniform Y limits across multiple axes.
+    
+    Args:
+        axes_list (list): List of matplotlib axes to equalize
+        padding (float): Padding percentage above max value
+    """
+    y_min = float('inf')
+    y_max = float('-inf')
+    
+    # Find global min and max
+    for ax in axes_list:
+        bottom, top = ax.get_ylim()
+        y_min = min(y_min, bottom)
+        y_max = max(y_max, top)
+    
+    # Add padding to top
+    y_max += (y_max - y_min) * padding
+    
+    # Set uniform limits
+    for ax in axes_list:
+        ax.set_ylim(y_min, y_max)
+
+def annotate_key_points(ax, x_data, y_data, labels=None, threshold=0.9):
+    """
+    Annotate important points in the data (maximum, minimum, crossovers).
+    
+    Args:
+        ax (Axes): Matplotlib axes to annotate
+        x_data (list): X coordinates
+        y_data (list): Y coordinates
+        labels (list): Optional labels for the data series
+        threshold (float): Threshold ratio to max value for annotation
+    """
+    max_idx = np.argmax(y_data)
+    min_idx = np.argmin(y_data)
+    
+    # Maximum point
+    ax.annotate(f"Max: {y_data[max_idx]:.1f}",
+                xy=(x_data[max_idx], y_data[max_idx]),
+                xytext=(0, 15), textcoords='offset points',
+                ha='center', va='bottom',
+                bbox=dict(boxstyle='round,pad=0.3', fc='yellow', alpha=0.5),
+                arrowprops=dict(arrowstyle='->', connectionstyle='arc3,rad=0'))
+    
+    # Minimum point if significantly different from maximum
+    if y_data[min_idx] < y_data[max_idx] * threshold:
+        ax.annotate(f"Min: {y_data[min_idx]:.1f}",
+                    xy=(x_data[min_idx], y_data[min_idx]),
+                    xytext=(0, -15), textcoords='offset points',
+                    ha='center', va='top',
+                    bbox=dict(boxstyle='round,pad=0.3', fc='lightblue', alpha=0.5),
+                    arrowprops=dict(arrowstyle='->', connectionstyle='arc3,rad=0'))
+
+def apply_hatches_to_bars(ax):
+    """Apply hatches to bars to distinguish them in addition to colors."""
+    hatches = ['/', '\\', 'x', '.', 'o', '*']
+    
+    for i, patch in enumerate(ax.patches):
+        # Apply hatch pattern based on bar index
+        hatch_idx = i % len(hatches)
+        patch.set_hatch(hatches[hatch_idx])
+        # Make hatch visible but not overwhelming
+        patch.set_edgecolor('black')
+        patch.set_linewidth(0.5)
 
 class SimplifiedDatabaseBenchmark:
     """Class for running benchmarks comparing different databases."""
@@ -547,29 +620,6 @@ class SimplifiedDatabaseBenchmark:
         
         return df
     
-    def visualize_results(self, insert_df=None, query_df=None):
-        """Visualize benchmark results."""
-        # Create specific directory for visualizations
-        viz_dir = f"{self.result_dir}/visualizations_{self.timestamp}"
-        os.makedirs(viz_dir, exist_ok=True)
-        
-        # Configure global style for charts
-        plt.style.use('seaborn-v0_8-whitegrid')
-        sns.set_palette("Set2")
-        
-        # 1. Visualize insert performance
-        if insert_df is not None:
-            self._visualize_insert_performance(insert_df, viz_dir)
-        
-        # 2. Visualize query performance
-        if query_df is not None:
-            self._visualize_query_performance(query_df, viz_dir)
-        
-        # 3. Create a summary HTML dashboard
-        self._create_performance_dashboard(viz_dir)
-        
-        print(f"Visualizations generated in directory: {viz_dir}")
-    
     def _visualize_insert_performance(self, df, viz_dir):
         """Generate visualizations for insert performance."""
         # 1.1 Individual insert performance
@@ -582,13 +632,34 @@ class SimplifiedDatabaseBenchmark:
         # Create a chart for each database
         for db_name in grouped['database'].unique():
             db_data = grouped[grouped['database'] == db_name]
-            plt.plot(db_data['data_size'], db_data['mean'], marker='o', linewidth=2, label=db_name)
+            line, = plt.plot(db_data['data_size'], db_data['mean'], marker='o', linewidth=2, label=db_name)
             plt.fill_between(
                 db_data['data_size'],
                 db_data['mean'] - db_data['std'],
                 db_data['mean'] + db_data['std'],
                 alpha=0.2
             )
+            
+            # Annotate maximum point
+            max_idx = db_data['mean'].idxmax()
+            if not pd.isna(max_idx):
+                max_val = db_data.iloc[max_idx]['mean']
+                max_x = db_data.iloc[max_idx]['data_size']
+                plt.annotate(f"{db_name} max: {max_val:.0f} ops/s",
+                         xy=(max_x, max_val),
+                         xytext=(0, 10),  # vertical offset
+                         textcoords='offset points',
+                         ha='center',
+                         va='bottom',
+                         bbox=dict(boxstyle='round,pad=0.3', fc='yellow', alpha=0.5),
+                         color=line.get_color())
+        
+        # Add reference line for acceptable throughput
+        target_throughput = 3000  # Target operations per second
+        plt.axhline(y=target_throughput, color='g', linestyle='--', alpha=0.7)
+        plt.text(max(db_data['data_size'])*0.5, target_throughput*1.05, 
+                 'Target Throughput (3000 ops/s)', ha='center', va='bottom',
+                 bbox=dict(boxstyle='round,pad=0.3', fc='white', alpha=0.8))
         
         plt.title('Individual Insert Performance', fontsize=16)
         plt.xlabel('Number of Events', fontsize=14)
@@ -607,13 +678,27 @@ class SimplifiedDatabaseBenchmark:
         
         for db_name in grouped['database'].unique():
             db_data = grouped[grouped['database'] == db_name]
-            plt.plot(db_data['batch_size'], db_data['mean'], marker='s', linewidth=2, label=db_name)
+            line, = plt.plot(db_data['batch_size'], db_data['mean'], marker='s', linewidth=2, label=db_name)
             plt.fill_between(
                 db_data['batch_size'],
                 db_data['mean'] - db_data['std'],
                 db_data['mean'] + db_data['std'],
                 alpha=0.2
             )
+            
+            # Annotate maximum point
+            max_idx = db_data['mean'].idxmax()
+            if not pd.isna(max_idx):
+                max_val = db_data.iloc[max_idx]['mean']
+                max_x = db_data.iloc[max_idx]['batch_size']
+                plt.annotate(f"{db_name} max: {max_val:.0f} ops/s",
+                         xy=(max_x, max_val),
+                         xytext=(0, 10),  # vertical offset
+                         textcoords='offset points',
+                         ha='center',
+                         va='bottom',
+                         bbox=dict(boxstyle='round,pad=0.3', fc='yellow', alpha=0.5),
+                         color=line.get_color())
         
         plt.title('Batch Insert Performance', fontsize=16)
         plt.xlabel('Batch Size', fontsize=14)
@@ -651,7 +736,21 @@ class SimplifiedDatabaseBenchmark:
                     batch_sizes.append(batch_size)
             
             if performance_gains:  # Only plot if we have data
-                plt.plot(batch_sizes, performance_gains, marker='D', linewidth=2, label=db_name)
+                line, = plt.plot(batch_sizes, performance_gains, marker='D', linewidth=2, label=db_name)
+                
+                # Annotate maximum gain
+                if performance_gains:
+                    max_idx = np.argmax(performance_gains)
+                    max_gain = performance_gains[max_idx]
+                    max_batch = batch_sizes[max_idx]
+                    plt.annotate(f"{db_name} max gain: {max_gain:.1f}x",
+                            xy=(max_batch, max_gain),
+                            xytext=(0, 10),
+                            textcoords='offset points',
+                            ha='center',
+                            va='bottom',
+                            bbox=dict(boxstyle='round,pad=0.3', fc='yellow', alpha=0.5),
+                            color=line.get_color())
         
         plt.axhline(y=1, color='r', linestyle='--', alpha=0.5, label='Equivalence (no gain)')
         plt.title('Performance Gain of Batch Inserts vs. Individual Inserts', fontsize=16)
@@ -693,8 +792,28 @@ class SimplifiedDatabaseBenchmark:
             
             position = index + i * bar_width
             plt.bar(position, means, bar_width, yerr=stds, capsize=5, label=db_name)
+            
+            # Annotate bars with values
+            for j, v in enumerate(means):
+                if v > 0:
+                    plt.text(position[j], v + stds[j] + 0.001, 
+                             f"{v:.4f}s", 
+                             ha='center', va='bottom', 
+                             fontsize=8, rotation=45)
         
-        plt.xticks(index + bar_width * (len(grouped['database'].unique()) - 1) / 2, [op.replace('_', ' ').title() for op in operations], rotation=45, ha='right')
+        # Apply hatches to bars
+        apply_hatches_to_bars(plt.gca())
+        
+        # Add reference line for acceptable query time
+        acceptable_query_time = 0.01  # 10ms
+        plt.axhline(y=acceptable_query_time, color='r', linestyle='--', alpha=0.7)
+        plt.text(index[-1], acceptable_query_time*1.1, 
+                 'Acceptable Query Time (10ms)', ha='right', va='bottom',
+                 bbox=dict(boxstyle='round,pad=0.3', fc='white', alpha=0.8))
+        
+        plt.xticks(index + bar_width * (len(grouped['database'].unique()) - 1) / 2, 
+                   [op.replace('_', ' ').title() for op in operations], 
+                   rotation=45, ha='right')
         plt.title('Average Execution Time by Query Type', fontsize=16)
         plt.xlabel('Query Type', fontsize=14)
         plt.ylabel('Time (seconds)', fontsize=14)
@@ -710,6 +829,12 @@ class SimplifiedDatabaseBenchmark:
         # Create a boxplot for each query type
         sns.boxplot(x='operation', y='time', hue='database', data=df)
         
+        # Add reference line for acceptable query time
+        plt.axhline(y=acceptable_query_time, color='r', linestyle='--', alpha=0.7)
+        plt.text(len(operations)-1, acceptable_query_time*1.1, 
+                 'Acceptable Query Time (10ms)', ha='right', va='bottom',
+                 bbox=dict(boxstyle='round,pad=0.3', fc='white', alpha=0.8))
+        
         plt.title('Distribution of Execution Times by Query Type', fontsize=16)
         plt.xlabel('Query Type', fontsize=14)
         plt.ylabel('Time (seconds)', fontsize=14)
@@ -718,6 +843,219 @@ class SimplifiedDatabaseBenchmark:
         plt.tight_layout()
         plt.savefig(f"{viz_dir}/query_time_distribution.png", dpi=300)
         plt.close()
+    
+    def _create_latency_throughput_graph(self, insert_df, query_df, viz_dir):
+        """Create a combined graph showing the inverse relationship between latency and throughput."""
+        plt.figure(figsize=(14, 10))
+        
+        # Create dual axis plot
+        fig, ax1 = plt.subplots(figsize=(14, 8))
+        ax2 = ax1.twinx()
+        
+        # Extract data
+        for db_name in sorted(insert_df['database'].unique()):
+            # Get throughput data
+            throughput_data = insert_df[(insert_df['database'] == db_name) & 
+                                    (insert_df['operation'] == 'insert_batch')]
+            throughput_grouped = throughput_data.groupby('data_size')['ops_per_second'].mean().reset_index()
+            
+            # Get latency data 
+            latency_data = query_df[query_df['database'] == db_name]
+            latency_grouped = latency_data.groupby('operation')['time'].mean().reset_index()
+            
+            # Plot throughput on primary axis
+            line1, = ax1.plot(throughput_grouped['data_size'], throughput_grouped['ops_per_second'], 
+                     marker='o', linestyle='-', linewidth=2, 
+                     label=f"{db_name} (Throughput)")
+            
+            # Plot latency on secondary axis if available
+            if not latency_grouped.empty:
+                avg_latency = latency_grouped['time'].mean()
+                latency_values = [avg_latency] * len(throughput_grouped)
+                line2, = ax2.plot(throughput_grouped['data_size'], 
+                         latency_values, 
+                         marker='s', linestyle='--', linewidth=2,
+                         color=line1.get_color(), alpha=0.5,
+                         label=f"{db_name} (Latency)")
+        
+        # Set labels and title
+        ax1.set_xlabel('Batch Size / Number of Events', fontsize=14)
+        ax1.set_ylabel('Throughput (Operations per Second)', fontsize=14, color='blue')
+        ax2.set_ylabel('Average Latency (seconds)', fontsize=14, color='red')
+        
+        # Customize ticks
+        ax1.tick_params(axis='y', labelcolor='blue')
+        ax2.tick_params(axis='y', labelcolor='red')
+        
+        # Add grid and legend
+        ax1.grid(True, alpha=0.3)
+        lines1, labels1 = ax1.get_legend_handles_labels()
+        lines2, labels2 = ax2.get_legend_handles_labels()
+        ax1.legend(lines1 + lines2, labels1 + labels2, loc='upper center', bbox_to_anchor=(0.5, -0.1),
+                   ncol=3, fontsize=12)
+        
+        # Add an annotation explaining the relationship
+        plt.figtext(0.5, 0.01, 
+                   "Inverse relationship: As throughput increases, systems typically experience higher latency.",
+                   ha="center", fontsize=10, 
+                   bbox={"facecolor":"orange", "alpha":0.1, "pad":5})
+        
+        plt.title('Relationship Between Throughput and Latency', fontsize=16)
+        plt.tight_layout()
+        plt.savefig(f"{viz_dir}/latency_throughput_relationship.png", dpi=300)
+        plt.close()
+    
+    def _create_radar_chart(self, insert_df, query_df, advanced_query_df, viz_dir):
+        """Create a radar chart comparing overall performance across all dimensions."""
+        plt.figure(figsize=(12, 12))
+        
+        # Prepare data for radar chart
+        categories = ['Individual Insert', 'Batch Insert', 'User Query', 
+                      'Page Query', 'Advanced Queries', 'Concurrency Scalability']
+        
+        # Calculate normalized scores (higher is better)
+        scores = {}
+        
+        for db_name in insert_df['database'].unique():
+            db_scores = []
+            
+            # Single insert performance
+            single_inserts = insert_df[(insert_df['database'] == db_name) & 
+                                  (insert_df['operation'] == 'insert_single')]
+            if not single_inserts.empty:
+                avg_ops = single_inserts['ops_per_second'].mean()
+                db_scores.append(avg_ops)
+            else:
+                db_scores.append(0)
+                
+            # Batch insert performance
+            batch_inserts = insert_df[(insert_df['database'] == db_name) & 
+                                 (insert_df['operation'] == 'insert_batch')]
+            if not batch_inserts.empty:
+                avg_ops = batch_inserts['ops_per_second'].mean()
+                db_scores.append(avg_ops)
+            else:
+                db_scores.append(0)
+                
+            # Query by user performance (lower time is better, so invert)
+            user_queries = query_df[(query_df['database'] == db_name) & 
+                              (query_df['operation'] == 'query_by_user')]
+            if not user_queries.empty:
+                avg_time = user_queries['time'].mean()
+                # Invert so higher is better
+                db_scores.append(1.0 / (avg_time + 0.0001))  # Add small constant to avoid division by zero
+            else:
+                db_scores.append(0)
+                
+            # Query by page performance (lower time is better, so invert)
+            page_queries = query_df[(query_df['database'] == db_name) & 
+                              (query_df['operation'] == 'query_by_page')]
+            if not page_queries.empty:
+                avg_time = page_queries['time'].mean()
+                # Invert so higher is better
+                db_scores.append(1.0 / (avg_time + 0.0001))
+            else:
+                db_scores.append(0)
+                
+            # Advanced queries performance if available
+            if advanced_query_df is not None:
+                adv_queries = advanced_query_df[advanced_query_df['database'] == db_name]
+                if not adv_queries.empty:
+                    avg_time = adv_queries['time'].mean()
+                    # Invert so higher is better
+                    db_scores.append(1.0 / (avg_time + 0.0001))
+                else:
+                    db_scores.append(0)
+            else:
+                db_scores.append(0)
+                
+            # Concurrency scalability (estimate from batch performance trend)
+            if not batch_inserts.empty:
+                batch_sizes = batch_inserts['batch_size'].unique()
+                if len(batch_sizes) >= 2:
+                    small_batch = batch_inserts[batch_inserts['batch_size'] == min(batch_sizes)]['ops_per_second'].mean()
+                    large_batch = batch_inserts[batch_inserts['batch_size'] == max(batch_sizes)]['ops_per_second'].mean()
+                    # If scales well, large_batch should be higher than small_batch
+                    scalability = large_batch / (small_batch + 0.0001)
+                    db_scores.append(scalability)
+                else:
+                    db_scores.append(1)  # Neutral score
+            else:
+                db_scores.append(0)
+                
+            scores[db_name] = db_scores
+        
+        # Normalize scores across databases
+        max_scores = [max([scores[db][i] for db in scores.keys()]) for i in range(len(categories))]
+        normalized_scores = {}
+        
+        for db_name, db_scores in scores.items():
+            normalized_scores[db_name] = [db_scores[i] / max_scores[i] if max_scores[i] > 0 else 0 
+                                         for i in range(len(categories))]
+        
+        # Create radar chart
+        angles = np.linspace(0, 2*np.pi, len(categories), endpoint=False).tolist()
+        angles += angles[:1]  # Close the loop
+        
+        ax = plt.subplot(111, polar=True)
+        
+        # Plot each database
+        for db_name, db_scores in normalized_scores.items():
+            db_scores += db_scores[:1]  # Close the loop
+            ax.plot(angles, db_scores, linewidth=2, label=db_name)
+            ax.fill(angles, db_scores, alpha=0.1)
+        
+        # Set category labels
+        plt.xticks(angles[:-1], categories, fontsize=12)
+        
+        # Set y ticks and hide them
+        plt.yticks([0.2, 0.4, 0.6, 0.8, 1.0], ['0.2', '0.4', '0.6', '0.8', '1.0'], fontsize=8)
+        plt.ylim(0, 1)
+        
+        # Add legend and title
+        plt.legend(loc='upper right', bbox_to_anchor=(0.1, 0.1), fontsize=12)
+        plt.title('Overall Database Performance', fontsize=16, y=1.08)
+        
+        # Add annotations explaining the chart
+        plt.figtext(0.5, 0.01, 
+                   "Radar chart shows relative performance across dimensions (higher is better).\nValues are normalized with the best performer in each category set to 1.0.",
+                   ha="center", fontsize=10, 
+                   bbox={"facecolor":"lightblue", "alpha":0.2, "pad":5})
+        
+        plt.tight_layout()
+        plt.savefig(f"{viz_dir}/performance_radar_chart.png", dpi=300)
+        plt.close()
+    
+    def visualize_results(self, insert_df=None, query_df=None):
+        """Visualize benchmark results."""
+        # Create specific directory for visualizations
+        viz_dir = f"{self.result_dir}/visualizations_{self.timestamp}"
+        os.makedirs(viz_dir, exist_ok=True)
+        
+        # Configure global style for charts
+        plt.style.use('seaborn-v0_8-whitegrid')
+        sns.set_palette("Set2")
+        
+        # 1. Visualize insert performance
+        if insert_df is not None:
+            self._visualize_insert_performance(insert_df, viz_dir)
+        
+        # 2. Visualize query performance
+        if query_df is not None:
+            self._visualize_query_performance(query_df, viz_dir)
+        
+        # 3. Create a latency/throughput combined graph
+        if insert_df is not None and query_df is not None:
+            self._create_latency_throughput_graph(insert_df, query_df, viz_dir)
+        
+        # 4. Create a radar chart for global comparison
+        if insert_df is not None and query_df is not None:
+            self._create_radar_chart(insert_df, query_df, None, viz_dir)
+        
+        # 5. Create a summary HTML dashboard
+        self._create_performance_dashboard(viz_dir)
+        
+        print(f"Visualizations generated in directory: {viz_dir}")
     
     def _create_performance_dashboard(self, viz_dir):
         """Create an HTML dashboard with visualizations."""
@@ -828,6 +1166,22 @@ class SimplifiedDatabaseBenchmark:
                     </div>
                 </div>
                 
+                <div class="dashboard-section">
+                    <h2>Advanced Analysis</h2>
+                    
+                    <div class="visualization">
+                        <h3>Relationship Between Throughput and Latency</h3>
+                        <img src="latency_throughput_relationship.png" alt="Throughput/Latency Relationship">
+                        <p>This chart shows the inverse relationship between throughput and latency for each database.</p>
+                    </div>
+                    
+                    <div class="visualization">
+                        <h3>Overall Performance Comparison</h3>
+                        <img src="performance_radar_chart.png" alt="Performance Radar Chart">
+                        <p>This radar chart provides an overview of relative performance across all dimensions.</p>
+                    </div>
+                </div>
+                
                 <footer>
                     <p>Benchmark conducted as part of the "Beyond Relational Databases" (205.2) course at HES-SO Valais.</p>
                     <p>&copy; {datetime.now().year} - Database Comparison Laboratory</p>
@@ -840,6 +1194,7 @@ class SimplifiedDatabaseBenchmark:
         # Save the HTML dashboard
         with open(f"{viz_dir}/dashboard.html", 'w') as f:
             f.write(html_content)
+
 
 def main():
     """Main function to run the benchmarks."""
