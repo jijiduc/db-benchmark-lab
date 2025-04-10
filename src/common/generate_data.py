@@ -1,52 +1,85 @@
-#!/usr/bin/env python3
 """
-Module pour générer des données synthétiques de mouvements de souris
-pour tester les différentes bases de données.
+Module pour générer des données de test pour le benchmark des bases de données.
 """
-import json
 import random
+import uuid
 import time
 from datetime import datetime
-import os
-import argparse
 
-def generate_mouse_event(user_id=None):
-    """Génère un événement de souris aléatoire."""
-    if user_id is None:
-        user_id = random.randint(1, 100)
+def generate_dataset(size):
+    """
+    Génère un ensemble de données d'événements de souris pour les tests.
     
-    return {
-        "user_id": user_id,
-        "x_pos": random.randint(0, 1920),
-        "y_pos": random.randint(0, 1080),
-        "event_type": random.choice(["move", "click", "scroll"]),
-        "timestamp": datetime.now().isoformat(),
-        "page": f"/page_{random.randint(1, 10)}",
-        "session_id": f"session_{random.randint(1000, 9999)}"
-    }
-
-def generate_dataset(num_events=1000, num_users=10):
-    """Génère un ensemble de données de mouvements de souris."""
+    Args:
+        size (int): Nombre d'événements à générer
+        
+    Returns:
+        list: Liste d'événements de souris
+    """
     events = []
-    for _ in range(num_events):
-        user_id = random.randint(1, num_users)
-        events.append(generate_mouse_event(user_id))
+    
+    # Pages possibles
+    pages = [f"/page_{i}" for i in range(1, 10)]
+    
+    # Types d'événements possibles
+    event_types = ["click", "mousemove", "mouseover", "mouseout", "mousedown", "mouseup"]
+    
+    # Nombre possible d'utilisateurs
+    user_count = max(min(size // 10, 100), 5)  # Min 5, max 100 utilisateurs
+    
+    for i in range(size):
+        # Générer des données aléatoires pour l'événement
+        user_id = random.randint(1, user_count)
+        page = random.choice(pages)
+        event_type = random.choice(event_types)
+        x_pos = random.randint(0, 1000)
+        y_pos = random.randint(0, 800)
+        
+        # Générer un identifiant unique pour l'événement - IMPORTANT pour les opérations de mise à jour
+        event_id = str(uuid.uuid4())
+        
+        # Créer l'événement
+        event = {
+            "event_id": event_id,
+            "user_id": user_id,
+            "page": page,
+            "event_type": event_type,
+            "x_pos": x_pos,
+            "y_pos": y_pos,
+            "timestamp": datetime.now().isoformat()
+        }
+        
+        events.append(event)
+    
     return events
 
-def save_to_file(data, filename="data/mouse_events.json"):
-    """Sauvegarde les données générées dans un fichier JSON."""
-    os.makedirs(os.path.dirname(filename), exist_ok=True)
-    with open(filename, 'w') as f:
-        json.dump(data, f, indent=2)
-    print(f"Données générées et sauvegardées dans {filename}")
-
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description='Génère des données synthétiques de mouvements de souris.')
-    parser.add_argument('--events', type=int, default=1000, help='Nombre d\'événements à générer')
-    parser.add_argument('--users', type=int, default=10, help='Nombre d\'utilisateurs différents')
-    parser.add_argument('--output', type=str, default="data/mouse_events.json", help='Fichier de sortie')
+def generate_advanced_dataset(size):
+    """
+    Génère un ensemble de données enrichies pour les tests avancés.
     
-    args = parser.parse_args()
+    Args:
+        size (int): Nombre d'événements à générer
+        
+    Returns:
+        list: Liste d'événements enrichis
+    """
+    # Obtenir les données de base
+    basic_events = generate_dataset(size)
     
-    dataset = generate_dataset(args.events, args.users)
-    save_to_file(dataset, args.output)
+    # Enrichir avec des données supplémentaires
+    for event in basic_events:
+        # Ajouter des informations de durée
+        event['duration'] = round(random.uniform(0.1, 5.0), 2)
+        
+        # Ajouter des informations de session
+        event['session_id'] = f"session_{random.randint(1, 20)}"
+        
+        # Ajouter des informations de dispositif
+        devices = ['desktop', 'mobile', 'tablet']
+        event['device'] = random.choice(devices)
+        
+        # Ajouter des informations de viewport
+        event['viewport_width'] = random.randint(320, 1920)
+        event['viewport_height'] = random.randint(480, 1080)
+    
+    return basic_events

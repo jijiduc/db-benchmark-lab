@@ -108,3 +108,167 @@ class PostgreSQLClient:
     def __exit__(self, exc_type, exc_val, exc_tb):
         """Ensure resources are cleaned up."""
         self.close()
+    
+    # 1. Requêtes avancées
+    def find_events_by_time_range(self, start_date, end_date):
+        """Trouve les événements dans une plage de temps spécifique."""
+        start_str = start_date.isoformat()
+        end_str = end_date.isoformat()
+        
+        query = """
+        SELECT * FROM mouse_events 
+        WHERE (data->>'timestamp')::timestamp >= %s::timestamp 
+        AND (data->>'timestamp')::timestamp <= %s::timestamp
+        """
+        
+        with self.conn.cursor() as cur:
+            cur.execute(query, (start_str, end_str))
+            return [dict(row) for row in cur.fetchall()]
+
+    def find_events_in_screen_zone(self, x_min, x_max, y_min, y_max):
+        """Trouve les événements dans une zone d'écran spécifique."""
+        query = """
+        SELECT * FROM mouse_events 
+        WHERE (data->>'x_pos')::float >= %s 
+        AND (data->>'x_pos')::float <= %s
+        AND (data->>'y_pos')::float >= %s 
+        AND (data->>'y_pos')::float <= %s
+        """
+        
+        with self.conn.cursor() as cur:
+            cur.execute(query, (x_min, x_max, y_min, y_max))
+            return [dict(row) for row in cur.fetchall()]
+
+    def aggregate_events_by_user(self):
+        """Agrège les événements par utilisateur."""
+        query = """
+        SELECT data->>'user_id' as user_id, COUNT(*) as count, 
+        json_agg(data) as events
+        FROM mouse_events
+        GROUP BY data->>'user_id'
+        """
+        
+        with self.conn.cursor() as cur:
+            cur.execute(query)
+            return [dict(row) for row in cur.fetchall()]
+
+    def aggregate_events_by_page(self):
+        """Agrège les événements par page."""
+        query = """
+        SELECT data->>'page' as page, COUNT(*) as count, 
+        json_agg(data) as events
+        FROM mouse_events
+        GROUP BY data->>'page'
+        """
+        
+        with self.conn.cursor() as cur:
+            cur.execute(query)
+            return [dict(row) for row in cur.fetchall()]
+
+    def aggregate_events_by_device(self):
+        """Agrège les événements par type de dispositif."""
+        query = """
+        SELECT data->>'device' as device, COUNT(*) as count, 
+        json_agg(data) as events
+        FROM mouse_events
+        GROUP BY data->>'device'
+        """
+        
+        with self.conn.cursor() as cur:
+            cur.execute(query)
+            return [dict(row) for row in cur.fetchall()]
+
+    # 2. Opérations de mise à jour
+    def update_event(self, event_id, update_data):
+        """Met à jour un seul événement."""
+        query = """
+        UPDATE mouse_events
+        SET data = data || %s
+        WHERE data->>'event_id' = %s
+        """
+        
+        with self.conn.cursor() as cur:
+            cur.execute(query, (json.dumps(update_data), event_id))
+            self.conn.commit()
+            return cur.rowcount
+
+    def update_events_batch(self, event_ids, update_data):
+        """Met à jour plusieurs événements en une seule opération."""
+        query = """
+        UPDATE mouse_events
+        SET data = data || %s
+        WHERE data->>'event_id' IN %s
+        """
+        
+        with self.conn.cursor() as cur:
+            cur.execute(query, (json.dumps(update_data), tuple(event_ids)))
+            self.conn.commit()
+            return cur.rowcount
+
+    def update_events_conditional(self, conditions, update_data):
+        """Met à jour les événements qui correspondent à certaines conditions."""
+        conditions_sql = []
+        params = []
+        
+        for key, value in conditions.items():
+            conditions_sql.append(f"data->>'{key}' = %s")
+            params.append(value)
+        
+        where_clause = " AND ".join(conditions_sql)
+        query = f"""
+        UPDATE mouse_events
+        SET data = data || %s
+        WHERE {where_clause}
+        """
+        
+        params.insert(0, json.dumps(update_data))
+        
+        with self.conn.cursor() as cur:
+            cur.execute(query, params)
+            self.conn.commit()
+            return cur.rowcount
+
+    # 3. Opérations de suppression
+    def delete_event(self, event_id):
+        """Supprime un seul événement."""
+        query = """
+        DELETE FROM mouse_events
+        WHERE data->>'event_id' = %s
+        """
+        
+        with self.conn.cursor() as cur:
+            cur.execute(query, (event_id,))
+            self.conn.commit()
+            return cur.rowcount
+
+    def delete_events_batch(self, event_ids):
+        """Supprime plusieurs événements en une seule opération."""
+        query = """
+        DELETE FROM mouse_events
+        WHERE data->>'event_id' IN %s
+        """
+        
+        with self.conn.cursor() as cur:
+            cur.execute(query, (tuple(event_ids),))
+            self.conn.commit()
+            return cur.rowcount
+
+    def delete_events_conditional(self, conditions):
+        """Supprime les événements qui correspondent à certaines conditions."""
+        conditions_sql = []
+        params = []
+        
+        for key, value in conditions.items():
+            conditions_sql.append(f"data->>'{key}' = %s")
+            params.append(value)
+        
+        where_clause = " AND ".join(conditions_sql)
+        query = f"""
+        DELETE FROM mouse_events
+        WHERE {where_clause}
+        """
+        
+        with self.conn.cursor() as cur:
+            cur.execute(query, params)
+            self.conn.commit()
+            return cur.rowcount

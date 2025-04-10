@@ -42,7 +42,7 @@ db-comparison-lab/
 
 ### Installation
 1. Clone the repository
-2. Create a virtual environment: `python -m venv venv`
+2. Create a virtual environment: `python3 -m venv venv`
 3. Activate the environment: `source venv/bin/activate` (Linux/Mac) or `venv\Scripts\activate` (Windows)
 4. Install dependencies: `pip install -r requirements.txt`
 

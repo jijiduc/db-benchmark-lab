@@ -1,0 +1,115 @@
+
+        <!DOCTYPE html>
+        <html lang="fr">
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>Benchmark de Bases de Données - Résultats</title>
+            <style>
+                body {
+                    font-family: Arial, sans-serif;
+                    line-height: 1.6;
+                    margin: 0;
+                    padding: 20px;
+                    color: #333;
+                }
+                h1, h2, h3 {
+                    color: #2c3e50;
+                }
+                .container {
+                    max-width: 1200px;
+                    margin: 0 auto;
+                }
+                .dashboard-section {
+                    margin-bottom: 40px;
+                    padding: 20px;
+                    background-color: #f9f9f9;
+                    border-radius: 8px;
+                    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+                }
+                .visualization {
+                    margin: 20px 0;
+                    text-align: center;
+                }
+                .visualization img {
+                    max-width: 100%;
+                    height: auto;
+                    border: 1px solid #ddd;
+                    border-radius: 4px;
+                }
+                .summary {
+                    background-color: #e9f7ef;
+                    padding: 15px;
+                    border-left: 5px solid #27ae60;
+                    margin-bottom: 20px;
+                }
+                footer {
+                    margin-top: 40px;
+                    padding-top: 20px;
+                    border-top: 1px solid #eee;
+                    text-align: center;
+                    font-size: 0.9em;
+                    color: #777;
+                }
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <h1>Résultats du Benchmark de Bases de Données pour le Suivi de Souris</h1>
+                <p>Date d'exécution: 10/04/2025 20:19:44</p>
+                
+                <div class="dashboard-section">
+                    <h2>Résumé des Performances</h2>
+                    <div class="summary">
+                        <p>Ce dashboard présente les résultats de la comparaison entre MongoDB, PostgreSQL et Redis 
+                        pour une application de suivi de mouvement de souris. Les tests ont été effectués sur des opérations 
+                        d'insertion et de requête avec différentes tailles de données.</p>
+                    </div>
+                </div>
+                
+                <div class="dashboard-section">
+                    <h2>Performance d'Insertion</h2>
+                    
+                    <div class="visualization">
+                        <h3>Insertions individuelles</h3>
+                        <img src="insert_single_performance.png" alt="Performance d'insertion individuelle">
+                        <p>Ce graphique montre le nombre d'opérations par seconde pour les insertions individuelles en fonction de la taille des données.</p>
+                    </div>
+                    
+                    <div class="visualization">
+                        <h3>Insertions par lot</h3>
+                        <img src="insert_batch_performance.png" alt="Performance d'insertion par lot">
+                        <p>Ce graphique montre le nombre d'opérations par seconde pour les insertions par lot en fonction de la taille du lot.</p>
+                    </div>
+                    
+                    <div class="visualization">
+                        <h3>Gain de performance des lots</h3>
+                        <img src="insert_batch_efficiency.png" alt="Efficacité des insertions par lot">
+                        <p>Ce graphique montre le facteur d'accélération des insertions par lot par rapport aux insertions individuelles.</p>
+                    </div>
+                </div>
+                
+                <div class="dashboard-section">
+                    <h2>Performance de Requête</h2>
+                    
+                    <div class="visualization">
+                        <h3>Temps d'exécution par type de requête</h3>
+                        <img src="query_performance_by_type.png" alt="Performance par type de requête">
+                        <p>Ce graphique montre le temps moyen d'exécution pour chaque type de requête.</p>
+                    </div>
+                    
+                    <div class="visualization">
+                        <h3>Distribution des temps de requête</h3>
+                        <img src="query_time_distribution.png" alt="Distribution des temps de requête">
+                        <p>Ce graphique montre la distribution des temps d'exécution pour chaque type de requête.</p>
+                    </div>
+                </div>
+                
+                <footer>
+                    <p>Benchmark réalisé dans le cadre du cours "Beyond Relational Databases" (205.2) à la HES-SO Valais.</p>
+                    <p>&copy; 2025 - Laboratoire de comparaison de bases de données</p>
+                </footer>
+            </div>
+        </body>
+        </html>
+        
