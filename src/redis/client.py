@@ -141,17 +141,17 @@ class RedisClient:
         """Ensure resources are cleaned up."""
         self.close()
     
-    # 1. Requêtes avancées
+    # 1. Advanced queries
     def find_events_by_time_range(self, start_date, end_date):
-        """Trouve les événements dans une plage de temps spécifique."""
+        """Find events within a specific time range."""
         start_str = start_date.isoformat()
         end_str = end_date.isoformat()
         
-        all_keys = self.redis.keys('mouse_event:*')
+        all_keys = self.client.keys('mouse_event:*')  # Changed from self.redis
         result = []
         
         for key in all_keys:
-            event_data = self.redis.get(key)
+            event_data = self.client.get(key)  # Changed from self.redis
             if event_data:
                 event = json.loads(event_data)
                 if 'timestamp' in event:
@@ -161,12 +161,12 @@ class RedisClient:
         return result
 
     def find_events_in_screen_zone(self, x_min, x_max, y_min, y_max):
-        """Trouve les événements dans une zone d'écran spécifique."""
-        all_keys = self.redis.keys('mouse_event:*')
+        """Find events within a specific screen area."""
+        all_keys = self.client.keys('mouse_event:*')  # Changed from self.redis
         result = []
         
         for key in all_keys:
-            event_data = self.redis.get(key)
+            event_data = self.client.get(key)  # Changed from self.redis
             if event_data:
                 event = json.loads(event_data)
                 x_pos = float(event.get('x_pos', 0))
@@ -178,12 +178,12 @@ class RedisClient:
         return result
 
     def aggregate_events_by_user(self):
-        """Agrège les événements par utilisateur."""
-        all_keys = self.redis.keys('mouse_event:*')
+        """Aggregate events by user."""
+        all_keys = self.client.keys('mouse_event:*')  # Changed from self.redis
         user_events = {}
         
         for key in all_keys:
-            event_data = self.redis.get(key)
+            event_data = self.client.get(key)  # Changed from self.redis
             if event_data:
                 event = json.loads(event_data)
                 user_id = event.get('user_id')
@@ -204,12 +204,12 @@ class RedisClient:
         return result
 
     def aggregate_events_by_page(self):
-        """Agrège les événements par page."""
-        all_keys = self.redis.keys('mouse_event:*')
+        """Aggregate events by page."""
+        all_keys = self.client.keys('mouse_event:*')  # Changed from self.redis
         page_events = {}
         
         for key in all_keys:
-            event_data = self.redis.get(key)
+            event_data = self.client.get(key)  # Changed from self.redis
             if event_data:
                 event = json.loads(event_data)
                 page = event.get('page')
@@ -230,12 +230,12 @@ class RedisClient:
         return result
 
     def aggregate_events_by_device(self):
-        """Agrège les événements par type de dispositif."""
-        all_keys = self.redis.keys('mouse_event:*')
+        """Aggregate events by device type."""
+        all_keys = self.client.keys('mouse_event:*')  # Changed from self.redis
         device_events = {}
         
         for key in all_keys:
-            event_data = self.redis.get(key)
+            event_data = self.client.get(key)  # Changed from self.redis
             if event_data:
                 event = json.loads(event_data)
                 device = event.get('device')
@@ -255,22 +255,21 @@ class RedisClient:
         
         return result
 
-    # 2. Opérations de mise à jour
     def update_event(self, event_id, update_data):
-        """Met à jour un seul événement."""
+        """Update a single event."""
         key = f'mouse_event:{event_id}'
-        event_data = self.redis.get(key)
+        event_data = self.client.get(key)  # Changed from self.redis
         
         if event_data:
             event = json.loads(event_data)
             event.update(update_data)
-            self.redis.set(key, json.dumps(event))
+            self.client.set(key, json.dumps(event))  # Changed from self.redis
             return 1
         
         return 0
 
     def update_events_batch(self, event_ids, update_data):
-        """Met à jour plusieurs événements en une seule opération."""
+        """Update multiple events in a single operation."""
         count = 0
         
         for event_id in event_ids:
@@ -280,16 +279,16 @@ class RedisClient:
         return count
 
     def update_events_conditional(self, conditions, update_data):
-        """Met à jour les événements qui correspondent à certaines conditions."""
-        all_keys = self.redis.keys('mouse_event:*')
+        """Update events that match certain conditions."""
+        all_keys = self.client.keys('mouse_event:*')  # Changed from self.redis
         count = 0
         
         for key in all_keys:
-            event_data = self.redis.get(key)
+            event_data = self.client.get(key)  # Changed from self.redis
             if event_data:
                 event = json.loads(event_data)
                 
-                # Vérifier si l'événement correspond aux conditions
+                # Check if the event matches the conditions
                 match = True
                 for cond_key, cond_value in conditions.items():
                     if event.get(cond_key) != cond_value:
@@ -298,43 +297,42 @@ class RedisClient:
                 
                 if match:
                     event.update(update_data)
-                    self.redis.set(key, json.dumps(event))
+                    self.client.set(key, json.dumps(event))  # Changed from self.redis
                     count += 1
         
         return count
 
-    # 3. Opérations de suppression
     def delete_event(self, event_id):
-        """Supprime un seul événement."""
+        """Delete a single event."""
         key = f'mouse_event:{event_id}'
-        if self.redis.exists(key):
-            self.redis.delete(key)
+        if self.client.exists(key):  # Changed from self.redis
+            self.client.delete(key)  # Changed from self.redis
             return 1
         return 0
 
     def delete_events_batch(self, event_ids):
-        """Supprime plusieurs événements en une seule opération."""
+        """Delete multiple events in a single operation."""
         keys = [f'mouse_event:{event_id}' for event_id in event_ids]
         count = 0
         
         for key in keys:
-            if self.redis.exists(key):
-                self.redis.delete(key)
+            if self.client.exists(key):  # Changed from self.redis
+                self.client.delete(key)  # Changed from self.redis
                 count += 1
         
         return count
 
     def delete_events_conditional(self, conditions):
-        """Supprime les événements qui correspondent à certaines conditions."""
-        all_keys = self.redis.keys('mouse_event:*')
+        """Delete events that match certain conditions."""
+        all_keys = self.client.keys('mouse_event:*')  # Changed from self.redis
         count = 0
         
         for key in all_keys:
-            event_data = self.redis.get(key)
+            event_data = self.client.get(key)  # Changed from self.redis
             if event_data:
                 event = json.loads(event_data)
                 
-                # Vérifier si l'événement correspond aux conditions
+                # Check if the event matches the conditions
                 match = True
                 for cond_key, cond_value in conditions.items():
                     if event.get(cond_key) != cond_value:
@@ -342,7 +340,7 @@ class RedisClient:
                         break
                 
                 if match:
-                    self.redis.delete(key)
+                    self.client.delete(key)  # Changed from self.redis
                     count += 1
         
         return count

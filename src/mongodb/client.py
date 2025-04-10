@@ -100,24 +100,24 @@ class MongoDBClient:
         """Ensure resources are cleaned up."""
         self.close()
         
-    # 1. Requêtes avancées
+    # 1. Advanced queries
     def find_events_by_time_range(self, start_date, end_date):
-        """Trouve les événements dans une plage de temps spécifique."""
+        """Find events within a specific time range."""
         start_str = start_date.isoformat()
         end_str = end_date.isoformat()
         query = {"timestamp": {"$gte": start_str, "$lte": end_str}}
-        return list(self.collection.find(query))
+        return list(self.events.find(query))
 
     def find_events_in_screen_zone(self, x_min, x_max, y_min, y_max):
-        """Trouve les événements dans une zone d'écran spécifique."""
+        """Find events within a specific screen area."""
         query = {
             "x_pos": {"$gte": x_min, "$lte": x_max},
             "y_pos": {"$gte": y_min, "$lte": y_max}
         }
-        return list(self.collection.find(query))
+        return list(self.events.find(query))
 
     def aggregate_events_by_user(self):
-        """Agrège les événements par utilisateur."""
+        """Aggregate events by user."""
         pipeline = [
             {"$group": {
                 "_id": "$user_id",
@@ -125,10 +125,10 @@ class MongoDBClient:
                 "events": {"$push": "$$ROOT"}
             }}
         ]
-        return list(self.collection.aggregate(pipeline))
+        return list(self.events.aggregate(pipeline))
 
     def aggregate_events_by_page(self):
-        """Agrège les événements par page."""
+        """Aggregate events by page."""
         pipeline = [
             {"$group": {
                 "_id": "$page",
@@ -136,10 +136,10 @@ class MongoDBClient:
                 "events": {"$push": "$$ROOT"}
             }}
         ]
-        return list(self.collection.aggregate(pipeline))
+        return list(self.events.aggregate(pipeline))
 
     def aggregate_events_by_device(self):
-        """Agrège les événements par type de dispositif."""
+        """Aggregate events by device type."""
         pipeline = [
             {"$group": {
                 "_id": "$device",
@@ -147,36 +147,34 @@ class MongoDBClient:
                 "events": {"$push": "$$ROOT"}
             }}
         ]
-        return list(self.collection.aggregate(pipeline))
+        return list(self.events.aggregate(pipeline))
 
-    # 2. Opérations de mise à jour
     def update_event(self, event_id, update_data):
-        """Met à jour un seul événement."""
-        result = self.collection.update_one({"event_id": event_id}, {"$set": update_data})
+        """Update a single event."""
+        result = self.events.update_one({"event_id": event_id}, {"$set": update_data})
         return result.modified_count
 
     def update_events_batch(self, event_ids, update_data):
-        """Met à jour plusieurs événements en une seule opération."""
-        result = self.collection.update_many({"event_id": {"$in": event_ids}}, {"$set": update_data})
+        """Update multiple events in a single operation."""
+        result = self.events.update_many({"event_id": {"$in": event_ids}}, {"$set": update_data})
         return result.modified_count
 
     def update_events_conditional(self, conditions, update_data):
-        """Met à jour les événements qui correspondent à certaines conditions."""
-        result = self.collection.update_many(conditions, {"$set": update_data})
+        """Update events that match certain conditions."""
+        result = self.events.update_many(conditions, {"$set": update_data})
         return result.modified_count
 
-    # 3. Opérations de suppression
     def delete_event(self, event_id):
-        """Supprime un seul événement."""
-        result = self.collection.delete_one({"event_id": event_id})
+        """Delete a single event."""
+        result = self.events.delete_one({"event_id": event_id})
         return result.deleted_count
 
     def delete_events_batch(self, event_ids):
-        """Supprime plusieurs événements en une seule opération."""
-        result = self.collection.delete_many({"event_id": {"$in": event_ids}})
+        """Delete multiple events in a single operation."""
+        result = self.events.delete_many({"event_id": {"$in": event_ids}})
         return result.deleted_count
 
     def delete_events_conditional(self, conditions):
-        """Supprime les événements qui correspondent à certaines conditions."""
-        result = self.collection.delete_many(conditions)
+        """Delete events that match certain conditions."""
+        result = self.events.delete_many(conditions)
         return result.deleted_count

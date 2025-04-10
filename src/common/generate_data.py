@@ -1,5 +1,5 @@
 """
-Module pour générer des données de test pour le benchmark des bases de données.
+Module to generate test data for database benchmarking.
 """
 import random
 import uuid
@@ -8,37 +8,37 @@ from datetime import datetime
 
 def generate_dataset(size):
     """
-    Génère un ensemble de données d'événements de souris pour les tests.
+    Generates a dataset of mouse events for testing.
     
     Args:
-        size (int): Nombre d'événements à générer
+        size (int): Number of events to generate
         
     Returns:
-        list: Liste d'événements de souris
+        list: List of mouse events
     """
     events = []
     
-    # Pages possibles
+    # Possible pages
     pages = [f"/page_{i}" for i in range(1, 10)]
     
-    # Types d'événements possibles
+    # Possible event types
     event_types = ["click", "mousemove", "mouseover", "mouseout", "mousedown", "mouseup"]
     
-    # Nombre possible d'utilisateurs
-    user_count = max(min(size // 10, 100), 5)  # Min 5, max 100 utilisateurs
+    # Possible number of users
+    user_count = max(min(size // 10, 100), 5)  # Min 5, max 100 users
     
     for i in range(size):
-        # Générer des données aléatoires pour l'événement
+        # Generate random data for the event
         user_id = random.randint(1, user_count)
         page = random.choice(pages)
         event_type = random.choice(event_types)
         x_pos = random.randint(0, 1000)
         y_pos = random.randint(0, 800)
         
-        # Générer un identifiant unique pour l'événement - IMPORTANT pour les opérations de mise à jour
+        # Generate a unique identifier for the event - IMPORTANT for update operations
         event_id = str(uuid.uuid4())
         
-        # Créer l'événement
+        # Create the event
         event = {
             "event_id": event_id,
             "user_id": user_id,
@@ -55,30 +55,30 @@ def generate_dataset(size):
 
 def generate_advanced_dataset(size):
     """
-    Génère un ensemble de données enrichies pour les tests avancés.
+    Generates an enriched dataset for advanced testing.
     
     Args:
-        size (int): Nombre d'événements à générer
+        size (int): Number of events to generate
         
     Returns:
-        list: Liste d'événements enrichis
+        list: List of enriched events
     """
-    # Obtenir les données de base
+    # Get the basic data
     basic_events = generate_dataset(size)
     
-    # Enrichir avec des données supplémentaires
+    # Enrich with additional data
     for event in basic_events:
-        # Ajouter des informations de durée
+        # Add duration information
         event['duration'] = round(random.uniform(0.1, 5.0), 2)
         
-        # Ajouter des informations de session
+        # Add session information
         event['session_id'] = f"session_{random.randint(1, 20)}"
         
-        # Ajouter des informations de dispositif
+        # Add device information
         devices = ['desktop', 'mobile', 'tablet']
         event['device'] = random.choice(devices)
         
-        # Ajouter des informations de viewport
+        # Add viewport information
         event['viewport_width'] = random.randint(320, 1920)
         event['viewport_height'] = random.randint(480, 1080)
     

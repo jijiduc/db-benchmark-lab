@@ -26,8 +26,7 @@ var/
 # Données et résultats
 data/*.json
 data/*.csv
-results/*.csv
-results/*.json
+results/*
 
 # Fichiers IDE
 .idea/
