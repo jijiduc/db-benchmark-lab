@@ -1,46 +1,101 @@
 #!/usr/bin/env python3
 """
-Module pour interagir avec MongoDB dans le cadre du benchmark
-de suivi des mouvements de souris.
+Module to interact with MongoDB for the mouse tracking benchmark.
 """
 import pymongo
 import json
+from bson import ObjectId
 import time
 from datetime import datetime
 
 class MongoDBClient:
-    """Client pour interagir avec MongoDB."""
+    """Client for interacting with MongoDB."""
     
     def __init__(self, uri="mongodb://localhost:27017/", db_name="mouse_tracking"):
-        """Initialise la connexion à MongoDB."""
+        """Initialize the connection to MongoDB."""
         self.client = pymongo.MongoClient(uri)
         self.db = self.client[db_name]
         self.events = self.db.events
         
+        # Create indexes for better query performance
+        self.events.create_index("user_id")
+        self.events.create_index("page")
+        
     def insert_event(self, event):
-        """Insère un événement de souris dans la collection."""
-        return self.events.insert_one(event)
+        """Insert a mouse event in the collection."""
+        # Make a copy to avoid modifying the original object
+        clean_event = event.copy()
+        # Ensure we don't have duplicate _id fields if reusing events
+        if '_id' in clean_event:
+            del clean_event['_id']
+            
+        result = self.events.insert_one(clean_event)
+        return result.inserted_id
         
     def insert_events(self, events):
-        """Insère plusieurs événements de souris dans la collection."""
-        return self.events.insert_many(events)
+        """Insert multiple mouse events in the collection."""
+        # Make copies to avoid modifying the original objects
+        clean_events = []
+        for event in events:
+            clean_event = event.copy()
+            # Ensure we don't have duplicate _id fields if reusing events
+            if '_id' in clean_event:
+                del clean_event['_id']
+            clean_events.append(clean_event)
+            
+        result = self.events.insert_many(clean_events)
+        return result.inserted_ids
         
     def find_events_by_user(self, user_id):
-        """Récupère tous les événements d'un utilisateur."""
+        """Retrieve all events from a user."""
         return list(self.events.find({"user_id": user_id}))
         
     def find_events_by_page(self, page):
-        """Récupère tous les événements d'une page."""
+        """Retrieve all events from a page."""
         return list(self.events.find({"page": page}))
         
     def count_events(self):
-        """Compte le nombre total d'événements."""
+        """Count the total number of events."""
         return self.events.count_documents({})
         
     def clear_collection(self):
-        """Vide la collection d'événements."""
+        """Clear the events collection."""
         return self.events.delete_many({})
         
+    def to_json_serializable(self, mongo_obj):
+        """Convert MongoDB objects to JSON serializable format."""
+        if isinstance(mongo_obj, list):
+            return [self.to_json_serializable(item) for item in mongo_obj]
+        
+        if isinstance(mongo_obj, dict):
+            result = {}
+            for key, value in mongo_obj.items():
+                if key == '_id' and isinstance(value, ObjectId):
+                    result[key] = str(value)
+                else:
+                    result[key] = self.to_json_serializable(value)
+            return result
+            
+        if isinstance(mongo_obj, ObjectId):
+            return str(mongo_obj)
+            
+        return mongo_obj
+        
+    def export_events_as_json(self, query=None):
+        """Export events that match the query as JSON-serializable objects."""
+        if query is None:
+            query = {}
+        events = list(self.events.find(query))
+        return self.to_json_serializable(events)
+        
     def close(self):
-        """Ferme la connexion à MongoDB."""
+        """Close the connection to MongoDB."""
         self.client.close()
+        
+    def __enter__(self):
+        """Support for context manager."""
+        return self
+        
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        """Ensure resources are cleaned up."""
+        self.close()
