@@ -1,0 +1,131 @@
+
+        <!DOCTYPE html>
+        <html lang="en">
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>Database Benchmark Results</title>
+            <style>
+                body {
+                    font-family: Arial, sans-serif;
+                    line-height: 1.6;
+                    margin: 0;
+                    padding: 20px;
+                    color: #333;
+                }
+                h1, h2, h3 {
+                    color: #2c3e50;
+                }
+                .container {
+                    max-width: 1200px;
+                    margin: 0 auto;
+                }
+                .dashboard-section {
+                    margin-bottom: 40px;
+                    padding: 20px;
+                    background-color: #f9f9f9;
+                    border-radius: 8px;
+                    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+                }
+                .visualization {
+                    margin: 20px 0;
+                    text-align: center;
+                }
+                .visualization img {
+                    max-width: 100%;
+                    height: auto;
+                    border: 1px solid #ddd;
+                    border-radius: 4px;
+                }
+                .summary {
+                    background-color: #e9f7ef;
+                    padding: 15px;
+                    border-left: 5px solid #27ae60;
+                    margin-bottom: 20px;
+                }
+                footer {
+                    margin-top: 40px;
+                    padding-top: 20px;
+                    border-top: 1px solid #eee;
+                    text-align: center;
+                    font-size: 0.9em;
+                    color: #777;
+                }
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <h1>Database Benchmark Results for Mouse Tracking</h1>
+                <p>Execution Date: 11/04/2025 23:20:56</p>
+                
+                <div class="dashboard-section">
+                    <h2>Performance Summary</h2>
+                    <div class="summary">
+                        <p>This dashboard presents the results of comparing MongoDB, PostgreSQL and Redis 
+                        for a mouse movement tracking application. Tests were performed on insert and query operations 
+                        with different data sizes.</p>
+                    </div>
+                </div>
+                
+                <div class="dashboard-section">
+                    <h2>Insert Performance</h2>
+                    
+                    <div class="visualization">
+                        <h3>Individual Inserts</h3>
+                        <img src="insert_single_performance.png" alt="Individual Insert Performance">
+                        <p>This chart shows the number of operations per second for individual inserts based on data size.</p>
+                    </div>
+                    
+                    <div class="visualization">
+                        <h3>Batch Inserts</h3>
+                        <img src="insert_batch_performance.png" alt="Batch Insert Performance">
+                        <p>This chart shows the number of operations per second for batch inserts based on batch size.</p>
+                    </div>
+                    
+                    <div class="visualization">
+                        <h3>Batch Performance Gain</h3>
+                        <img src="insert_batch_efficiency.png" alt="Batch Insert Efficiency">
+                        <p>This chart shows the speedup factor of batch inserts compared to individual inserts.</p>
+                    </div>
+                </div>
+                
+                <div class="dashboard-section">
+                    <h2>Query Performance</h2>
+                    
+                    <div class="visualization">
+                        <h3>Execution Time by Query Type</h3>
+                        <img src="query_performance_by_type.png" alt="Performance by Query Type">
+                        <p>This chart shows the average execution time for each query type.</p>
+                    </div>
+                    
+                    <div class="visualization">
+                        <h3>Query Time Distribution</h3>
+                        <img src="query_time_distribution.png" alt="Query Time Distribution">
+                        <p>This chart shows the distribution of execution times for each query type.</p>
+                    </div>
+                </div>
+                
+                <div class="dashboard-section">
+                    <h2>Advanced Analysis</h2>
+                    
+                    <div class="visualization">
+                        <h3>Relationship Between Throughput and Latency</h3>
+                        <img src="latency_throughput_relationship.png" alt="Throughput/Latency Relationship">
+                        <p>This chart shows the inverse relationship between throughput and latency for each database.</p>
+                    </div>
+                    
+                    <div class="visualization">
+                        <h3>Overall Performance Comparison</h3>
+                        <img src="performance_radar_chart.png" alt="Performance Radar Chart">
+                        <p>This radar chart provides an overview of relative performance across all dimensions.</p>
+                    </div>
+                </div>
+                
+                <footer>
+                    <p>Benchmark conducted as part of the "Beyond Relational Databases" (205.2) course at HES-SO Valais.</p>
+                    <p>&copy; 2025 - Database Comparison Laboratory</p>
+                </footer>
+            </div>
+        </body>
+        </html>
+        

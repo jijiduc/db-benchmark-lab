@@ -1,0 +1,489 @@
+
+        <!DOCTYPE html>
+        <html lang="en">
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>Database Benchmark Statistical Analysis</title>
+            <style>
+                body {
+                    font-family: Arial, sans-serif;
+                    line-height: 1.6;
+                    margin: 0;
+                    padding: 20px;
+                    color: #333;
+                }
+                h1, h2, h3 {
+                    color: #2c3e50;
+                }
+                .container {
+                    max-width: 1200px;
+                    margin: 0 auto;
+                }
+                table {
+                    border-collapse: collapse;
+                    width: 100%;
+                    margin-bottom: 20px;
+                }
+                th, td {
+                    text-align: left;
+                    padding: 8px;
+                    border: 1px solid #ddd;
+                }
+                th {
+                    background-color: #f2f2f2;
+                }
+                tr:nth-child(even) {
+                    background-color: #f9f9f9;
+                }
+                .significant {
+                    font-weight: bold;
+                    color: #2980b9;
+                }
+                .warning {
+                    color: #e74c3c;
+                }
+                .summary {
+                    background-color: #e9f7ef;
+                    padding: 15px;
+                    border-left: 5px solid #27ae60;
+                    margin-bottom: 20px;
+                }
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <h1>Database Benchmark Statistical Analysis</h1>
+                <p>Generated on: 11 April 2025 23:20:58</p>
+                
+                <div class="summary">
+                    <h2>Summary of Findings</h2>
+                    <p>This report presents a detailed statistical analysis of the database benchmarks,
+                    including descriptive statistics, confidence intervals, and significance tests.</p>
+                </div>
+                
+                <h2>Descriptive Statistics</h2>
+                <p>The following tables show the key statistical measures for each database and operation.</p>
+        
+                <h3>Operation: insert_batch</h3>
+                <table>
+                    <tr>
+                        <th>Database</th>
+                        <th>Metric</th>
+                        <th>Count</th>
+                        <th>Mean</th>
+                        <th>Std Dev</th>
+                        <th>Min</th>
+                        <th>Median</th>
+                        <th>Max</th>
+                        <th>95th Percentile</th>
+                    </tr>
+            
+                            <tr>
+                                <td>    mongodb
+Name: 0, dtype: object</td>
+                                <td>Time</td>
+                                <td>240</td>
+                                <td>0.0313</td>
+                                <td>0.0541</td>
+                                <td>0.0008</td>
+                                <td>0.0059</td>
+                                <td>0.2200</td>
+                                <td>0.1779</td>
+                            </tr>
+                        
+                            <tr>
+                                <td>    mongodb
+Name: 0, dtype: object</td>
+                                <td>Ops Per Second</td>
+                                <td>240</td>
+                                <td>53279.6745</td>
+                                <td>37240.0622</td>
+                                <td>101.2750</td>
+                                <td>51612.6007</td>
+                                <td>129034.0682</td>
+                                <td>109276.1605</td>
+                            </tr>
+                        
+                            <tr>
+                                <td>    postgresql
+Name: 2, dtype: object</td>
+                                <td>Time</td>
+                                <td>240</td>
+                                <td>0.0460</td>
+                                <td>0.0705</td>
+                                <td>0.0015</td>
+                                <td>0.0088</td>
+                                <td>0.3057</td>
+                                <td>0.2094</td>
+                            </tr>
+                        
+                            <tr>
+                                <td>    postgresql
+Name: 2, dtype: object</td>
+                                <td>Ops Per Second</td>
+                                <td>240</td>
+                                <td>26787.6157</td>
+                                <td>19330.9942</td>
+                                <td>176.9450</td>
+                                <td>26653.4593</td>
+                                <td>61708.5285</td>
+                                <td>52882.9680</td>
+                            </tr>
+                        
+                            <tr>
+                                <td>    redis
+Name: 4, dtype: object</td>
+                                <td>Time</td>
+                                <td>240</td>
+                                <td>0.3045</td>
+                                <td>0.4995</td>
+                                <td>0.0003</td>
+                                <td>0.0382</td>
+                                <td>1.5734</td>
+                                <td>1.4977</td>
+                            </tr>
+                        
+                            <tr>
+                                <td>    redis
+Name: 4, dtype: object</td>
+                                <td>Ops Per Second</td>
+                                <td>240</td>
+                                <td>6461.9963</td>
+                                <td>1665.7380</td>
+                                <td>1555.1739</td>
+                                <td>7004.0911</td>
+                                <td>8534.5488</td>
+                                <td>7832.6012</td>
+                            </tr>
+                        </table>
+                <h3>Operation: insert_single</h3>
+                <table>
+                    <tr>
+                        <th>Database</th>
+                        <th>Metric</th>
+                        <th>Count</th>
+                        <th>Mean</th>
+                        <th>Std Dev</th>
+                        <th>Min</th>
+                        <th>Median</th>
+                        <th>Max</th>
+                        <th>95th Percentile</th>
+                    </tr>
+            
+                            <tr>
+                                <td>    mongodb
+Name: 1, dtype: object</td>
+                                <td>Time</td>
+                                <td>180</td>
+                                <td>7.7010</td>
+                                <td>10.2350</td>
+                                <td>0.0231</td>
+                                <td>1.9578</td>
+                                <td>31.6744</td>
+                                <td>28.8199</td>
+                            </tr>
+                        
+                            <tr>
+                                <td>    mongodb
+Name: 1, dtype: object</td>
+                                <td>Ops Per Second</td>
+                                <td>180</td>
+                                <td>3555.0837</td>
+                                <td>332.4437</td>
+                                <td>2761.2089</td>
+                                <td>3540.9123</td>
+                                <td>4464.1864</td>
+                                <td>4291.4191</td>
+                            </tr>
+                        
+                            <tr>
+                                <td>    postgresql
+Name: 3, dtype: object</td>
+                                <td>Time</td>
+                                <td>180</td>
+                                <td>46.8307</td>
+                                <td>70.5690</td>
+                                <td>0.0902</td>
+                                <td>14.0574</td>
+                                <td>229.3040</td>
+                                <td>206.5354</td>
+                            </tr>
+                        
+                            <tr>
+                                <td>    postgresql
+Name: 3, dtype: object</td>
+                                <td>Ops Per Second</td>
+                                <td>180</td>
+                                <td>625.2393</td>
+                                <td>330.3980</td>
+                                <td>291.5063</td>
+                                <td>467.4949</td>
+                                <td>1303.2151</td>
+                                <td>1188.1502</td>
+                            </tr>
+                        
+                            <tr>
+                                <td>    redis
+Name: 5, dtype: object</td>
+                                <td>Time</td>
+                                <td>180</td>
+                                <td>12.3651</td>
+                                <td>16.4774</td>
+                                <td>0.0398</td>
+                                <td>3.3352</td>
+                                <td>49.0770</td>
+                                <td>45.6283</td>
+                            </tr>
+                        
+                            <tr>
+                                <td>    redis
+Name: 5, dtype: object</td>
+                                <td>Ops Per Second</td>
+                                <td>180</td>
+                                <td>2255.0084</td>
+                                <td>142.3172</td>
+                                <td>1784.6301</td>
+                                <td>2259.6284</td>
+                                <td>2628.0331</td>
+                                <td>2548.7982</td>
+                            </tr>
+                        </table>
+                <h2>Confidence Intervals (95%)</h2>
+                <p>The following tables show 95% confidence intervals for key metrics.</p>
+        
+                <h3>Operation: insert_batch</h3>
+                <table>
+                    <tr>
+                        <th>Database</th>
+                        <th>Metric</th>
+                        <th>Mean</th>
+                        <th>Lower CI</th>
+                        <th>Upper CI</th>
+                        <th>CI Width</th>
+                        <th>Relative Width (%)</th>
+                    </tr>
+            
+                            <tr>
+                                <td>mongodb</td>
+                                <td>Time</td>
+                                <td>0.0313</td>
+                                <td>0.0244</td>
+                                <td>0.0382</td>
+                                <td>0.0138</td>
+                                <td class="warning">43.93%</td>
+                            </tr>
+                        
+                            <tr>
+                                <td>mongodb</td>
+                                <td>Ops Per Second</td>
+                                <td>53279.6745</td>
+                                <td>48544.2639</td>
+                                <td>58015.0852</td>
+                                <td>9470.8213</td>
+                                <td class="warning">17.78%</td>
+                            </tr>
+                        
+                            <tr>
+                                <td>postgresql</td>
+                                <td>Time</td>
+                                <td>0.0460</td>
+                                <td>0.0370</td>
+                                <td>0.0549</td>
+                                <td>0.0179</td>
+                                <td class="warning">38.98%</td>
+                            </tr>
+                        
+                            <tr>
+                                <td>postgresql</td>
+                                <td>Ops Per Second</td>
+                                <td>26787.6157</td>
+                                <td>24329.5050</td>
+                                <td>29245.7263</td>
+                                <td>4916.2214</td>
+                                <td class="warning">18.35%</td>
+                            </tr>
+                        
+                            <tr>
+                                <td>redis</td>
+                                <td>Time</td>
+                                <td>0.3045</td>
+                                <td>0.2409</td>
+                                <td>0.3680</td>
+                                <td>0.1270</td>
+                                <td class="warning">41.73%</td>
+                            </tr>
+                        
+                            <tr>
+                                <td>redis</td>
+                                <td>Ops Per Second</td>
+                                <td>6461.9963</td>
+                                <td>6250.1826</td>
+                                <td>6673.8099</td>
+                                <td>423.6273</td>
+                                <td class="">6.56%</td>
+                            </tr>
+                        </table>
+                <h3>Operation: insert_single</h3>
+                <table>
+                    <tr>
+                        <th>Database</th>
+                        <th>Metric</th>
+                        <th>Mean</th>
+                        <th>Lower CI</th>
+                        <th>Upper CI</th>
+                        <th>CI Width</th>
+                        <th>Relative Width (%)</th>
+                    </tr>
+            
+                            <tr>
+                                <td>mongodb</td>
+                                <td>Time</td>
+                                <td>7.7010</td>
+                                <td>6.1956</td>
+                                <td>9.2063</td>
+                                <td>3.0108</td>
+                                <td class="warning">39.10%</td>
+                            </tr>
+                        
+                            <tr>
+                                <td>mongodb</td>
+                                <td>Ops Per Second</td>
+                                <td>3555.0837</td>
+                                <td>3506.1874</td>
+                                <td>3603.9801</td>
+                                <td>97.7926</td>
+                                <td class="">2.75%</td>
+                            </tr>
+                        
+                            <tr>
+                                <td>postgresql</td>
+                                <td>Time</td>
+                                <td>46.8307</td>
+                                <td>36.4513</td>
+                                <td>57.2101</td>
+                                <td>20.7588</td>
+                                <td class="warning">44.33%</td>
+                            </tr>
+                        
+                            <tr>
+                                <td>postgresql</td>
+                                <td>Ops Per Second</td>
+                                <td>625.2393</td>
+                                <td>576.6439</td>
+                                <td>673.8347</td>
+                                <td>97.1909</td>
+                                <td class="warning">15.54%</td>
+                            </tr>
+                        
+                            <tr>
+                                <td>redis</td>
+                                <td>Time</td>
+                                <td>12.3651</td>
+                                <td>9.9416</td>
+                                <td>14.7886</td>
+                                <td>4.8471</td>
+                                <td class="warning">39.20%</td>
+                            </tr>
+                        
+                            <tr>
+                                <td>redis</td>
+                                <td>Ops Per Second</td>
+                                <td>2255.0084</td>
+                                <td>2234.0761</td>
+                                <td>2275.9406</td>
+                                <td>41.8645</td>
+                                <td class="">1.86%</td>
+                            </tr>
+                        </table>
+                <h2>Statistical Significance Tests</h2>
+                <p>The following tables show the results of t-tests comparing different databases.</p>
+        
+                <h3>Operation: insert_single</h3>
+                <table>
+                    <tr>
+                        <th>Database 1</th>
+                        <th>Database 2</th>
+                        <th>Difference</th>
+                        <th>% Difference</th>
+                        <th>p-value</th>
+                        <th>Significant?</th>
+                        <th>Better Database</th>
+                    </tr>
+            
+                    <tr>
+                        <td>mongodb</td>
+                        <td>postgresql</td>
+                        <td>-39.1297</td>
+                        <td>508.11%</td>
+                        <td>0.0000</td>
+                        <td class="significant">Yes</td>
+                        <td class="significant">mongodb</td>
+                    </tr>
+                
+                    <tr>
+                        <td>mongodb</td>
+                        <td>redis</td>
+                        <td>-4.6641</td>
+                        <td>60.57%</td>
+                        <td>0.0014</td>
+                        <td class="significant">Yes</td>
+                        <td class="significant">mongodb</td>
+                    </tr>
+                
+                    <tr>
+                        <td>postgresql</td>
+                        <td>redis</td>
+                        <td>34.4656</td>
+                        <td>278.73%</td>
+                        <td>0.0000</td>
+                        <td class="significant">Yes</td>
+                        <td class="significant">redis</td>
+                    </tr>
+                </table>
+                <h3>Operation: insert_batch</h3>
+                <table>
+                    <tr>
+                        <th>Database 1</th>
+                        <th>Database 2</th>
+                        <th>Difference</th>
+                        <th>% Difference</th>
+                        <th>p-value</th>
+                        <th>Significant?</th>
+                        <th>Better Database</th>
+                    </tr>
+            
+                    <tr>
+                        <td>mongodb</td>
+                        <td>postgresql</td>
+                        <td>-0.0147</td>
+                        <td>46.79%</td>
+                        <td>0.0109</td>
+                        <td class="significant">Yes</td>
+                        <td class="significant">mongodb</td>
+                    </tr>
+                
+                    <tr>
+                        <td>mongodb</td>
+                        <td>redis</td>
+                        <td>-0.2732</td>
+                        <td>872.36%</td>
+                        <td>0.0000</td>
+                        <td class="significant">Yes</td>
+                        <td class="significant">mongodb</td>
+                    </tr>
+                
+                    <tr>
+                        <td>postgresql</td>
+                        <td>redis</td>
+                        <td>-0.2585</td>
+                        <td>562.41%</td>
+                        <td>0.0000</td>
+                        <td class="significant">Yes</td>
+                        <td class="significant">postgresql</td>
+                    </tr>
+                </table>
+            </div>
+        </body>
+        </html>
+        

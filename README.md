@@ -146,3 +146,6 @@ This project is an academic exercise created for the course "Beyond Relational D
 
 - Prof. Dr. Pamela Delgado
 - Prof. Dr. René Schumann
+
+## LLM contribution
+- This project was developed with the assistance of Claude AI (Anthropic).
